@@ -1,0 +1,273 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { db } from '../../../db';
+import { courses, reservations } from '../../../db/schema';
+import { eq, count, and, notInArray } from 'drizzle-orm';
+
+const { id } = Astro.params;
+
+if (!id) {
+  return Astro.redirect('/admin/courses');
+}
+
+let message = '';
+let messageType = 'success';
+
+if (Astro.request.method === 'POST') {
+  try {
+    const formData = await Astro.request.formData();
+    const action = formData.get('action');
+    
+    if (action === 'update') {
+      await db.update(courses)
+        .set({
+          courseType: formData.get('courseType') as string,
+          startDate: formData.get('startDate') as string,
+          endDate: formData.get('endDate') as string,
+          location: formData.get('location') as string || 'Gdańsk',
+          maxParticipants: parseInt(formData.get('maxParticipants') as string) || 15,
+          price: formData.get('price') ? parseFloat(formData.get('price') as string) : null,
+          status: formData.get('status') as string || 'open',
+          notes: formData.get('notes') as string || null,
+        })
+        .where(eq(courses.id, parseInt(id)));
+      message = 'Kurs zaktualizowany';
+    } else if (action === 'delete') {
+      // Sprawdź czy ma rezerwacje
+      const hasReservations = await db.select({ count: count() })
+        .from(reservations)
+        .where(eq(reservations.courseId, parseInt(id)));
+      
+      if (hasReservations[0].count > 0) {
+        message = 'Nie można usunąć kursu z rezerwacjami';
+        messageType = 'error';
+      } else {
+        await db.delete(courses).where(eq(courses.id, parseInt(id)));
+        return Astro.redirect('/admin/courses?msg=deleted');
+      }
+    }
+  } catch (e) {
+    console.error(e);
+    message = 'Błąd podczas zapisywania';
+    messageType = 'error';
+  }
+}
+
+const course = await db.select()
+  .from(courses)
+  .where(eq(courses.id, parseInt(id)))
+  .get();
+
+if (!course) {
+  return Astro.redirect('/admin/courses');
+}
+
+// Policz rezerwacje
+const reservationCount = await db.select({ count: count() })
+  .from(reservations)
+  .where(
+    and(
+      eq(reservations.courseId, parseInt(id)),
+      notInArray(reservations.status, ['cancelled', 'no_show'])
+    )
+  );
+
+const courseTypes = [
+  { value: 'podstawowy', label: 'Podstawowy', emoji: '📚' },
+  { value: 'cysterny', label: 'Cysterny', emoji: '🛢️' },
+  { value: 'klasa1', label: 'Klasa 1', emoji: '💥' },
+  { value: 'klasa7', label: 'Klasa 7', emoji: '☢️' },
+  { value: 'odnowienie', label: 'Odnowienie', emoji: '🔄' },
+];
+
+const statuses = [
+  { value: 'open', label: 'Otwarty', class: 'bg-green-500 text-white' },
+  { value: 'full', label: 'Pełny', class: 'bg-yellow-500 text-white' },
+  { value: 'completed', label: 'Zakończony', class: 'bg-gray-500 text-white' },
+  { value: 'cancelled', label: 'Anulowany', class: 'bg-red-500 text-white' },
+];
+---
+
+<AdminLayout title="Edytuj kurs">
+  <div class="max-w-2xl mx-auto">
+    <a href="/admin/courses" class="text-gray-500 hover:text-gray-700 text-sm mb-4 inline-flex items-center gap-1">
+      ← Powrót do kursów
+    </a>
+    
+    {message && (
+      <div class={`mb-4 p-4 rounded-lg ${messageType === 'error' ? 'bg-red-50 border border-red-200 text-red-800' : 'bg-green-50 border border-green-200 text-green-800'}`}>
+        {message}
+      </div>
+    )}
+    
+    <form method="POST" class="space-y-6">
+      <input type="hidden" name="action" value="update" />
+      
+      <!-- Typ kursu -->
+      <div class="bg-white rounded-xl shadow-sm p-6">
+        <h2 class="font-bold text-lg mb-4">Typ kursu</h2>
+        
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+          {courseTypes.map((type) => (
+            <label class="flex flex-col items-center p-3 border-2 border-gray-200 rounded-xl cursor-pointer transition-all hover:border-[var(--accent)] has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent)]/5">
+              <input 
+                type="radio" 
+                name="courseType" 
+                value={type.value}
+                checked={course.courseType === type.value}
+                required
+                class="sr-only"
+              />
+              <span class="text-2xl mb-1">{type.emoji}</span>
+              <span class="text-sm font-medium text-center">{type.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <!-- Termin -->
+      <div class="bg-white rounded-xl shadow-sm p-6">
+        <h2 class="font-bold text-lg mb-4">Termin</h2>
+        
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Od *</label>
+            <input 
+              type="date" 
+              name="startDate" 
+              value={course.startDate}
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Do *</label>
+            <input 
+              type="date" 
+              name="endDate" 
+              value={course.endDate}
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+            />
+          </div>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Lokalizacja</label>
+          <input 
+            type="text" 
+            name="location" 
+            value={course.location || 'Gdańsk'}
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+          />
+        </div>
+      </div>
+
+      <!-- Szczegóły -->
+      <div class="bg-white rounded-xl shadow-sm p-6">
+        <h2 class="font-bold text-lg mb-4">Szczegóły</h2>
+        
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Cena (zł)</label>
+            <input 
+              type="number" 
+              name="price" 
+              value={course.price || ''}
+              step="1"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent text-lg font-bold"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Max uczestników</label>
+            <input 
+              type="number" 
+              name="maxParticipants" 
+              value={course.maxParticipants || 15}
+              min="1"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+            />
+          </div>
+        </div>
+        
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+          <div class="flex flex-wrap gap-2">
+            {statuses.map((s) => (
+              <label class={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition-all ${course.status === s.value ? s.class : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                <input 
+                  type="radio" 
+                  name="status" 
+                  value={s.value}
+                  checked={course.status === s.value}
+                  class="sr-only"
+                />
+                <span class="font-medium">{s.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Notatki</label>
+          <textarea 
+            name="notes" 
+            rows="2"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+          >{course.notes || ''}</textarea>
+        </div>
+      </div>
+
+      <!-- Info -->
+      <div class="bg-gray-50 rounded-xl p-4 flex items-center justify-between">
+        <div class="text-sm text-gray-600">
+          <span class="font-medium">Zapisanych:</span> {reservationCount[0].count} / {course.maxParticipants}
+        </div>
+        <a 
+          href={`/admin/reservations/new?courseId=${course.id}`}
+          class="text-[var(--accent)] hover:underline text-sm font-medium"
+        >
+          ➕ Dodaj uczestnika
+        </a>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex justify-between items-center">
+        <button 
+          type="button"
+          onclick="document.getElementById('deleteModal').showModal()"
+          class="text-red-600 hover:text-red-800 text-sm"
+        >
+          🗑️ Usuń kurs
+        </button>
+        <button type="submit" class="btn-primary py-3 px-8">
+          Zapisz zmiany
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Delete Modal -->
+  <dialog id="deleteModal" class="rounded-xl p-0 backdrop:bg-black/50">
+    <div class="p-6 max-w-md">
+      <h3 class="text-lg font-bold text-gray-900 mb-2">Usuń kurs?</h3>
+      <p class="text-gray-600 mb-4">
+        Czy na pewno chcesz usunąć ten kurs? Ta operacja jest nieodwracalna.
+      </p>
+      <div class="flex justify-end gap-2">
+        <button 
+          onclick="document.getElementById('deleteModal').close()"
+          class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+        >
+          Anuluj
+        </button>
+        <form method="POST">
+          <input type="hidden" name="action" value="delete" />
+          <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+            Usuń
+          </button>
+        </form>
+      </div>
+    </div>
+  </dialog>
+</AdminLayout>

@@ -6,6 +6,7 @@ import { eq, gte, asc } from 'drizzle-orm';
 
 let error = '';
 const preselectedParticipantId = Astro.url.searchParams.get('participantId');
+const preselectedCourseId = Astro.url.searchParams.get('courseId');
 
 if (Astro.request.method === 'POST') {
   try {
@@ -64,6 +65,10 @@ const preselectedParticipant = preselectedParticipantId
   ? allParticipants.find(p => p.id === parseInt(preselectedParticipantId))
   : null;
 
+const preselectedCourse = preselectedCourseId 
+  ? openCourses.find(c => c.id === parseInt(preselectedCourseId))
+  : null;
+
 function getCourseTypeLabel(type: string) {
   const labels: Record<string, string> = {
     'podstawowy': 'Podstawowy',
@@ -96,26 +101,37 @@ function formatDateShort(dateStr: string) {
       <div class="bg-white rounded-xl shadow-sm p-6">
         <h2 class="font-bold text-lg mb-4 flex items-center gap-2">
           <span class="w-7 h-7 bg-[var(--accent)] text-white rounded-full flex items-center justify-center text-sm">1</span>
-          Wybierz kurs
+          Kurs
         </h2>
         
-        <div class="grid gap-2" id="courseList">
-          {openCourses.length === 0 ? (
-            <p class="text-gray-500">Brak otwartych kursów</p>
-          ) : (
-            openCourses.map((c, i) => (
-              <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:border-[var(--accent)] cursor-pointer transition-colors has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent)]/5">
-                <input 
-                  type="radio" 
-                  name="courseId" 
-                  value={c.id} 
-                  required
-                  checked={i === 0}
-                  class="w-4 h-4 text-[var(--accent)]"
-                />
-                <div class="flex-1 min-w-0">
-                  <div class="font-medium">
-                    {formatDateShort(c.startDate)} - {formatDateShort(c.endDate)}
+        {preselectedCourse ? (
+          <!-- Preselected course -->
+          <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div class="font-bold text-green-800">
+              {formatDateShort(preselectedCourse.startDate)} - {formatDateShort(preselectedCourse.endDate)}
+              <span class="ml-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded">{getCourseTypeLabel(preselectedCourse.courseType)}</span>
+            </div>
+            <div class="text-sm text-green-600">{preselectedCourse.location} • {preselectedCourse.price} zł</div>
+            <input type="hidden" name="courseId" value={preselectedCourse.id} />
+          </div>
+        ) : (
+          <div class="grid gap-2" id="courseList">
+            {openCourses.length === 0 ? (
+              <p class="text-gray-500">Brak otwartych kursów</p>
+            ) : (
+              openCourses.map((c, i) => (
+                <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:border-[var(--accent)] cursor-pointer transition-colors has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent)]/5">
+                  <input 
+                    type="radio" 
+                    name="courseId" 
+                    value={c.id} 
+                    required
+                    checked={i === 0}
+                    class="w-4 h-4 text-[var(--accent)]"
+                  />
+                  <div class="flex-1 min-w-0">
+                    <div class="font-medium">
+                      {formatDateShort(c.startDate)} - {formatDateShort(c.endDate)}
                     <span class="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded">{getCourseTypeLabel(c.courseType)}</span>
                   </div>
                   <div class="text-sm text-gray-500">{c.location} • {c.price} zł</div>
@@ -123,7 +139,8 @@ function formatDateShort(dateStr: string) {
               </label>
             ))
           )}
-        </div>
+          </div>
+        )}
       </div>
 
       <!-- KROK 2: Uczestnik -->
