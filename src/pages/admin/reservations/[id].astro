@@ -72,12 +72,6 @@ if (Astro.url.searchParams.get('msg') === 'updated') {
   message = 'Dane zaktualizowane';
 }
 
-const statusColors: Record<string, string> = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  confirmed: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800',
-};
-
 const statusLabels: Record<string, string> = {
   pending: 'Oczekująca',
   confirmed: 'Potwierdzona',
