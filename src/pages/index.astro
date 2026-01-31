@@ -462,10 +462,15 @@ const nextCourses = courses.slice(0, 3);
               <input 
                 type="text" 
                 name="name" 
+                id="input-name"
                 required
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition-colors"
                 placeholder="Jan Kowalski"
               />
+              <p id="error-name" class="hidden mt-1 text-sm text-red-600 flex items-center gap-1">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                <span></span>
+              </p>
             </div>
             
             <div>
@@ -473,10 +478,15 @@ const nextCourses = courses.slice(0, 3);
               <input 
                 type="tel" 
                 name="phone" 
+                id="input-phone"
                 required
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition-colors"
                 placeholder="502 611 639"
               />
+              <p id="error-phone" class="hidden mt-1 text-sm text-red-600 flex items-center gap-1">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                <span></span>
+              </p>
             </div>
             
             <div>
@@ -569,6 +579,41 @@ const nextCourses = courses.slice(0, 3);
     document.body.appendChild(toast);
     
     setTimeout(() => toast.remove(), 3000);
+  }
+  
+  // Form validation helpers
+  function showError(inputId, message) {
+    const input = document.getElementById(inputId);
+    const error = document.getElementById(inputId.replace('input-', 'error-'));
+    if (input && error) {
+      input.classList.add('border-red-500', 'bg-red-50');
+      input.classList.remove('border-gray-300');
+      error.classList.remove('hidden');
+      error.querySelector('span').textContent = message;
+    }
+  }
+  
+  function clearError(inputId) {
+    const input = document.getElementById(inputId);
+    const error = document.getElementById(inputId.replace('input-', 'error-'));
+    if (input && error) {
+      input.classList.remove('border-red-500', 'bg-red-50');
+      input.classList.add('border-gray-300');
+      error.classList.add('hidden');
+    }
+  }
+  
+  function validatePhone(phone) {
+    // Usuń wszystkie znaki oprócz cyfr i +
+    const cleaned = phone.replace(/[^\d+]/g, '');
+    // Polski numer: 9 cyfr lub +48 + 9 cyfr
+    const regex = /^(\+48)?[1-9]\d{8}$/;
+    return regex.test(cleaned);
+  }
+  
+  function validateName(name) {
+    // Minimum 3 znaki, zawiera spację (imię i nazwisko)
+    return name.trim().length >= 3;
   }
   
   // Course Cart Logic
@@ -697,19 +742,70 @@ const nextCourses = courses.slice(0, 3);
     }
   });
   
+  // Real-time validation on blur
+  const nameInput = document.getElementById('input-name');
+  const phoneInput = document.getElementById('input-phone');
+  
+  nameInput?.addEventListener('blur', () => {
+    if (!validateName(nameInput.value)) {
+      showError('input-name', 'Podaj imię i nazwisko');
+    } else {
+      clearError('input-name');
+    }
+  });
+  
+  nameInput?.addEventListener('input', () => clearError('input-name'));
+  
+  phoneInput?.addEventListener('blur', () => {
+    if (phoneInput.value && !validatePhone(phoneInput.value)) {
+      showError('input-phone', 'Podaj poprawny numer telefonu (9 cyfr)');
+    } else if (!phoneInput.value) {
+      showError('input-phone', 'Numer telefonu jest wymagany');
+    } else {
+      clearError('input-phone');
+    }
+  });
+  
+  phoneInput?.addEventListener('input', () => clearError('input-phone'));
+  
   // Form submission
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    
+    // Clear all errors first
+    clearError('input-name');
+    clearError('input-phone');
+    
+    const formData = new FormData(form);
+    const name = formData.get('name')?.toString().trim() || '';
+    const phone = formData.get('phone')?.toString().trim() || '';
+    
+    // Validate
+    let hasErrors = false;
+    
+    if (!validateName(name)) {
+      showError('input-name', 'Podaj imię i nazwisko');
+      hasErrors = true;
+    }
+    
+    if (!phone) {
+      showError('input-phone', 'Numer telefonu jest wymagany');
+      hasErrors = true;
+    } else if (!validatePhone(phone)) {
+      showError('input-phone', 'Podaj poprawny numer telefonu (9 cyfr)');
+      hasErrors = true;
+    }
+    
+    if (hasErrors) return;
     
     const submitBtn = form.querySelector('button[type="submit"]');
     const originalText = submitBtn.textContent;
     submitBtn.textContent = 'Wysyłanie...';
     submitBtn.disabled = true;
     
-    const formData = new FormData(form);
     const data = {
-      name: formData.get('name'),
-      phone: formData.get('phone'),
+      name,
+      phone,
       email: formData.get('email'),
       notes: formData.get('notes'),
       courses: Array.from(cart.values())
@@ -743,7 +839,7 @@ const nextCourses = courses.slice(0, 3);
       form.reset();
       
     } catch (error) {
-      alert('Błąd: ' + error.message + '\n\nSpróbuj ponownie lub zadzwoń: 502 611 639');
+      showToast('Błąd wysyłania. Spróbuj ponownie lub zadzwoń: 502 611 639');
     } finally {
       submitBtn.textContent = originalText;
       submitBtn.disabled = false;
