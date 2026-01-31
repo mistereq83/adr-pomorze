@@ -175,18 +175,16 @@ const penalties = [
             Jeśli Twoja firma ma <strong>jakikolwiek kontakt z towarami niebezpiecznymi</strong> — przewozi je, nadaje, pakuje, magazynuje lub odbiera — potrzebujesz doradcy DGSA.
           </p>
           
-          <div class="space-y-4">
+          <div class="grid grid-cols-2 gap-3">
             {whoNeeds.map(item => (
-              <div class="flex items-start gap-4 bg-white rounded-xl p-4 border border-gray-100">
-                <div class="w-10 h-10 bg-[var(--accent)]/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <svg class="w-5 h-5 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div class="bg-white rounded-xl p-3 border border-gray-100">
+                <div class="w-8 h-8 bg-[var(--accent)]/10 rounded-lg flex items-center justify-center mb-2">
+                  <svg class="w-4 h-4 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <div>
-                  <h4 class="font-bold text-[var(--primary)]">{item.name}</h4>
-                  <p class="text-gray-500 text-sm">{item.desc}</p>
-                </div>
+                <h4 class="font-bold text-[var(--primary)] text-sm">{item.name}</h4>
+                <p class="text-gray-500 text-xs">{item.desc}</p>
               </div>
             ))}
           </div>
