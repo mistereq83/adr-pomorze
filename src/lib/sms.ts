@@ -3,8 +3,8 @@ import { db } from '../db';
 import { smsTemplates, smsLog, participants, courses, reservations } from '../db/schema';
 import { eq } from 'drizzle-orm';
 
-const SMSAPI_TOKEN = import.meta.env.SMSAPI_TOKEN || 'EBn1L4JB3GcSkFitbd4r9EPWvSiTeTffsUU96Zay';
-const SMSAPI_SENDER = import.meta.env.SMSAPI_SENDER || 'Port Yves';
+const SMSAPI_TOKEN = import.meta.env.SMSAPI_TOKEN || process.env.SMSAPI_TOKEN || '';
+const SMSAPI_SENDER = import.meta.env.SMSAPI_SENDER || process.env.SMSAPI_SENDER || 'ADR';
 const SMSAPI_URL = 'https://api.smsapi.pl/sms.do';
 
 interface SmsResult {
