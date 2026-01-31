@@ -2,19 +2,18 @@
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { db } from '../../../db';
 import { courses, participants, reservations } from '../../../db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, gte, asc } from 'drizzle-orm';
 
 let error = '';
+const preselectedParticipantId = Astro.url.searchParams.get('participantId');
 
 if (Astro.request.method === 'POST') {
   try {
     const formData = await Astro.request.formData();
     
-    // Sprawdź czy wybrać istniejącego uczestnika czy stworzyć nowego
     let participantId = formData.get('participantId') as string;
     
     if (!participantId || participantId === 'new') {
-      // Stwórz nowego uczestnika
       const newParticipant = await db.insert(participants).values({
         firstName: formData.get('firstName') as string,
         lastName: formData.get('lastName') as string,
@@ -29,7 +28,6 @@ if (Astro.request.method === 'POST') {
       participantId = newParticipant[0].id.toString();
     }
     
-    // Stwórz rezerwację
     await db.insert(reservations).values({
       courseId: parseInt(formData.get('courseId') as string),
       participantId: parseInt(participantId),
@@ -51,228 +49,279 @@ if (Astro.request.method === 'POST') {
   }
 }
 
-// Pobierz dostępne kursy
-const openCourses = await db.select().from(courses).where(eq(courses.status, 'open')).orderBy(courses.startDate);
+const today = new Date().toISOString().split('T')[0];
+const openCourses = await db.select()
+  .from(courses)
+  .where(eq(courses.status, 'open'))
+  .orderBy(asc(courses.startDate));
 
-// Pobierz uczestników do wyszukiwania
-const allParticipants = await db.select().from(participants).orderBy(participants.lastName).limit(100);
+const allParticipants = await db.select()
+  .from(participants)
+  .orderBy(participants.lastName)
+  .limit(200);
+
+const preselectedParticipant = preselectedParticipantId 
+  ? allParticipants.find(p => p.id === parseInt(preselectedParticipantId))
+  : null;
+
+function getCourseTypeLabel(type: string) {
+  const labels: Record<string, string> = {
+    'podstawowy': 'Podstawowy',
+    'cysterny': 'Cysterny',
+    'klasa1': 'Klasa 1',
+    'klasa7': 'Klasa 7',
+    'odnowienie': 'Odnowienie',
+  };
+  return labels[type] || type;
+}
+
+function formatDateShort(dateStr: string) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' });
+}
 ---
 
 <AdminLayout title="Dodaj rezerwację">
-  <div class="max-w-3xl">
+  <div class="max-w-2xl mx-auto">
+    <a href="/admin/reservations" class="text-gray-500 hover:text-gray-700 text-sm mb-4 inline-flex items-center gap-1">
+      ← Powrót do rezerwacji
+    </a>
+    
     {error && (
-      <div class="bg-red-50 text-red-700 p-4 rounded-lg mb-4">
-        {error}
-      </div>
+      <div class="bg-red-50 text-red-700 p-4 rounded-lg mb-4">{error}</div>
     )}
     
-    <form method="POST" class="bg-white rounded-xl shadow-sm p-6 space-y-6">
-      <!-- Wybór kursu -->
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">
-          Kurs *
-        </label>
-        <select 
-          name="courseId" 
-          required
-          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
-        >
-          <option value="">-- Wybierz kurs --</option>
-          {openCourses.map(c => (
-            <option value={c.id}>
-              {c.startDate} - {c.endDate} | {c.courseType} | {c.location}
-            </option>
-          ))}
-        </select>
-      </div>
-      
-      <!-- Wybór uczestnika -->
-      <div class="border-t pt-6">
-        <h3 class="font-bold text-lg mb-4">Uczestnik</h3>
+    <form method="POST" class="space-y-6">
+      <!-- KROK 1: Wybór kursu -->
+      <div class="bg-white rounded-xl shadow-sm p-6">
+        <h2 class="font-bold text-lg mb-4 flex items-center gap-2">
+          <span class="w-7 h-7 bg-[var(--accent)] text-white rounded-full flex items-center justify-center text-sm">1</span>
+          Wybierz kurs
+        </h2>
         
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Wybierz istniejącego lub dodaj nowego
-          </label>
-          <select 
-            name="participantId" 
-            id="participantSelect"
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
-            onchange="toggleNewParticipant(this.value)"
-          >
-            <option value="new">➕ Dodaj nowego uczestnika</option>
-            {allParticipants.map(p => (
-              <option value={p.id}>
-                {p.lastName} {p.firstName} | {p.phone}
-              </option>
-            ))}
-          </select>
+        <div class="grid gap-2" id="courseList">
+          {openCourses.length === 0 ? (
+            <p class="text-gray-500">Brak otwartych kursów</p>
+          ) : (
+            openCourses.map((c, i) => (
+              <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:border-[var(--accent)] cursor-pointer transition-colors has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent)]/5">
+                <input 
+                  type="radio" 
+                  name="courseId" 
+                  value={c.id} 
+                  required
+                  checked={i === 0}
+                  class="w-4 h-4 text-[var(--accent)]"
+                />
+                <div class="flex-1 min-w-0">
+                  <div class="font-medium">
+                    {formatDateShort(c.startDate)} - {formatDateShort(c.endDate)}
+                    <span class="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded">{getCourseTypeLabel(c.courseType)}</span>
+                  </div>
+                  <div class="text-sm text-gray-500">{c.location} • {c.price} zł</div>
+                </div>
+              </label>
+            ))
+          )}
         </div>
+      </div>
+
+      <!-- KROK 2: Uczestnik -->
+      <div class="bg-white rounded-xl shadow-sm p-6">
+        <h2 class="font-bold text-lg mb-4 flex items-center gap-2">
+          <span class="w-7 h-7 bg-[var(--accent)] text-white rounded-full flex items-center justify-center text-sm">2</span>
+          Uczestnik
+        </h2>
         
-        <!-- Formularz nowego uczestnika -->
-        <div id="newParticipantForm" class="space-y-4 bg-gray-50 p-4 rounded-lg">
-          <div class="grid md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Imię *</label>
-              <input 
-                type="text" 
-                name="firstName" 
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Nazwisko *</label>
-              <input 
-                type="text" 
-                name="lastName" 
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
-              />
-            </div>
+        {preselectedParticipant ? (
+          <!-- Preselected participant -->
+          <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+            <div class="font-bold text-green-800">{preselectedParticipant.lastName} {preselectedParticipant.firstName}</div>
+            <div class="text-sm text-green-600">{preselectedParticipant.phone}</div>
+            <input type="hidden" name="participantId" value={preselectedParticipant.id} />
           </div>
-          
-          <div class="grid md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Telefon *</label>
-              <input 
-                type="tel" 
-                name="phone" 
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
-              />
+        ) : (
+          <>
+            <!-- Toggle: Nowy / Istniejący -->
+            <div class="flex gap-2 mb-4">
+              <button 
+                type="button" 
+                id="btnNew"
+                onclick="showNewParticipant()"
+                class="flex-1 py-2 px-4 rounded-lg font-medium transition-all bg-[var(--accent)] text-white"
+              >
+                ➕ Nowy uczestnik
+              </button>
+              <button 
+                type="button"
+                id="btnExisting" 
+                onclick="showExistingParticipant()"
+                class="flex-1 py-2 px-4 rounded-lg font-medium transition-all bg-gray-100 text-gray-700 hover:bg-gray-200"
+              >
+                🔍 Szukaj w bazie
+              </button>
             </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input 
-                type="email" 
-                name="email" 
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
-              />
+            
+            <!-- Panel: Nowy uczestnik -->
+            <div id="panelNew" class="space-y-4">
+              <input type="hidden" name="participantId" value="new" id="participantIdField" />
+              
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Imię *</label>
+                  <input type="text" name="firstName" required id="firstName"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent" />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Nazwisko *</label>
+                  <input type="text" name="lastName" required id="lastName"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent" />
+                </div>
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Telefon *</label>
+                <input type="tel" name="phone" required id="phone"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent" />
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input type="email" name="email" id="email"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent" />
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">PESEL</label>
+                <input type="text" name="pesel" maxlength="11" id="pesel"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent font-mono" />
+              </div>
             </div>
-          </div>
-          
-          <div class="grid md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">PESEL</label>
-              <input 
-                type="text" 
-                name="pesel" 
-                maxlength="11"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
-              />
+            
+            <!-- Panel: Szukaj istniejącego -->
+            <div id="panelExisting" class="hidden">
+              <div class="mb-3">
+                <input 
+                  type="text" 
+                  id="searchInput"
+                  placeholder="Wpisz nazwisko lub telefon..."
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+                  oninput="filterParticipants(this.value)"
+                />
+              </div>
+              
+              <div id="participantsList" class="max-h-64 overflow-y-auto space-y-2">
+                {allParticipants.map(p => (
+                  <label 
+                    class="participant-item flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:border-[var(--accent)] cursor-pointer transition-colors has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent)]/5"
+                    data-search={`${p.lastName} ${p.firstName} ${p.phone}`.toLowerCase()}
+                  >
+                    <input 
+                      type="radio" 
+                      name="existingParticipant" 
+                      value={p.id}
+                      onchange="selectExistingParticipant(this.value)"
+                      class="w-4 h-4 text-[var(--accent)]"
+                    />
+                    <div>
+                      <div class="font-medium">{p.lastName} {p.firstName}</div>
+                      <div class="text-sm text-gray-500">{p.phone}</div>
+                    </div>
+                  </label>
+                ))}
+              </div>
             </div>
-            <div class="flex items-center gap-2 pt-6">
-              <input type="checkbox" name="hasCurrentAdr" id="hasCurrentAdr" class="w-4 h-4" />
-              <label for="hasCurrentAdr" class="text-sm text-gray-700">Ma aktualne zaświadczenie ADR</label>
+          </>
+        )}
+      </div>
+
+      <!-- KROK 3: Szczegóły -->
+      <div class="bg-white rounded-xl shadow-sm p-6">
+        <h2 class="font-bold text-lg mb-4 flex items-center gap-2">
+          <span class="w-7 h-7 bg-[var(--accent)] text-white rounded-full flex items-center justify-center text-sm">3</span>
+          Szczegóły
+        </h2>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+            <div class="flex flex-wrap gap-2">
+              <label class="flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent)]/5">
+                <input type="radio" name="status" value="confirmed" checked class="text-[var(--accent)]" />
+                <span>✓ Potwierdzona</span>
+              </label>
+              <label class="flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent)]/5">
+                <input type="radio" name="status" value="pending" class="text-[var(--accent)]" />
+                <span>⏳ Oczekująca</span>
+              </label>
             </div>
           </div>
           
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Nr aktualnego zaświadczenia ADR</label>
-            <input 
-              type="text" 
-              name="currentAdrNumber" 
+            <label class="block text-sm font-medium text-gray-700 mb-2">Płatność</label>
+            <div class="flex flex-wrap gap-2">
+              <label class="flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent)]/5">
+                <input type="radio" name="paymentStatus" value="unpaid" checked class="text-[var(--accent)]" />
+                <span>💸 Nieopłacone</span>
+              </label>
+              <label class="flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent)]/5">
+                <input type="radio" name="paymentStatus" value="paid" class="text-[var(--accent)]" />
+                <span>✓ Opłacone</span>
+              </label>
+            </div>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Notatki</label>
+            <textarea name="notes" rows="2" 
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
-            />
+              placeholder="Opcjonalne uwagi..."></textarea>
           </div>
         </div>
       </div>
-      
-      <!-- Status i płatność -->
-      <div class="border-t pt-6">
-        <h3 class="font-bold text-lg mb-4">Status rezerwacji</h3>
-        
-        <div class="grid md:grid-cols-3 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-            <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
-              <option value="confirmed">Potwierdzona</option>
-              <option value="pending">Oczekująca</option>
-              <option value="paid">Opłacona</option>
-            </select>
-          </div>
-          
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Metoda płatności</label>
-            <select name="paymentMethod" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
-              <option value="">-- nie wybrano --</option>
-              <option value="przelew">Przelew</option>
-              <option value="gotowka">Gotówka</option>
-              <option value="faktura">Faktura</option>
-            </select>
-          </div>
-          
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Status płatności</label>
-            <select name="paymentStatus" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
-              <option value="unpaid">Nieopłacone</option>
-              <option value="partial">Częściowo opłacone</option>
-              <option value="paid">Opłacone</option>
-            </select>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Faktura -->
-      <div class="border-t pt-6">
-        <div class="flex items-center gap-2 mb-4">
-          <input type="checkbox" name="needsInvoice" id="needsInvoice" class="w-4 h-4" />
-          <label for="needsInvoice" class="font-medium">Potrzebuje fakturę</label>
-        </div>
-        
-        <div class="grid md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Nazwa firmy</label>
-            <input type="text" name="invoiceCompany" class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">NIP</label>
-            <input type="text" name="invoiceNip" class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-          </div>
-        </div>
-      </div>
-      
-      <!-- Notatki -->
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">
-          Notatki
-        </label>
-        <textarea 
-          name="notes" 
-          rows="3"
-          placeholder="Dodatkowe informacje..."
-          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
-        ></textarea>
-      </div>
-      
-      <div class="flex items-center gap-4">
-        <button type="submit" class="btn-primary">
-          Dodaj rezerwację
-        </button>
-        <a href="/admin/reservations" class="text-gray-500 hover:text-gray-700">
-          Anuluj
-        </a>
-      </div>
+
+      <!-- Submit -->
+      <button type="submit" class="w-full btn-primary py-4 text-lg">
+        Dodaj rezerwację
+      </button>
     </form>
   </div>
+
+  <script is:inline>
+    function showNewParticipant() {
+      document.getElementById('panelNew').classList.remove('hidden');
+      document.getElementById('panelExisting').classList.add('hidden');
+      document.getElementById('btnNew').className = 'flex-1 py-2 px-4 rounded-lg font-medium transition-all bg-[var(--accent)] text-white';
+      document.getElementById('btnExisting').className = 'flex-1 py-2 px-4 rounded-lg font-medium transition-all bg-gray-100 text-gray-700 hover:bg-gray-200';
+      document.getElementById('participantIdField').value = 'new';
+      // Make new participant fields required
+      document.getElementById('firstName').required = true;
+      document.getElementById('lastName').required = true;
+      document.getElementById('phone').required = true;
+    }
+    
+    function showExistingParticipant() {
+      document.getElementById('panelNew').classList.add('hidden');
+      document.getElementById('panelExisting').classList.remove('hidden');
+      document.getElementById('btnExisting').className = 'flex-1 py-2 px-4 rounded-lg font-medium transition-all bg-[var(--accent)] text-white';
+      document.getElementById('btnNew').className = 'flex-1 py-2 px-4 rounded-lg font-medium transition-all bg-gray-100 text-gray-700 hover:bg-gray-200';
+      // Remove required from new participant fields
+      document.getElementById('firstName').required = false;
+      document.getElementById('lastName').required = false;
+      document.getElementById('phone').required = false;
+    }
+    
+    function selectExistingParticipant(id) {
+      document.getElementById('participantIdField').value = id;
+    }
+    
+    function filterParticipants(query) {
+      const items = document.querySelectorAll('.participant-item');
+      const q = query.toLowerCase();
+      items.forEach(item => {
+        const searchText = item.dataset.search;
+        item.style.display = searchText.includes(q) ? 'flex' : 'none';
+      });
+    }
+  </script>
 </AdminLayout>
-
-<script is:inline>
-function toggleNewParticipant(value) {
-  const form = document.getElementById('newParticipantForm');
-  if (value === 'new') {
-    form.style.display = 'block';
-    form.querySelectorAll('input[name="firstName"], input[name="lastName"], input[name="phone"]').forEach(el => {
-      el.required = true;
-    });
-  } else {
-    form.style.display = 'none';
-    form.querySelectorAll('input').forEach(el => {
-      el.required = false;
-    });
-  }
-}
-
-// Initialize
-document.addEventListener('DOMContentLoaded', () => {
-  toggleNewParticipant(document.getElementById('participantSelect').value);
-});
-</script>
