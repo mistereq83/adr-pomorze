@@ -1,16 +1,103 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { db } from '../db';
+import { courses as coursesTable, reservations } from '../db/schema';
+import { gte, eq, and, sql, asc } from 'drizzle-orm';
 
-const courses = [
-  { id: "podstawowy-17-19-01", date: "17-19.01.2026", type: "PODSTAWOWY", note: "WEEKEND", spots: 3, price: 1200 },
-  { id: "podstawowy-26-28-01", date: "26-28.01.2026", type: "PODSTAWOWY", note: "", spots: 5, price: 1200 },
-  { id: "cysterny-29-30-01", date: "29-30.01.2026", type: "CYSTERNY", note: "specjalistyczny", spots: 4, price: 600 },
-  { id: "podstawowy-31-02-02", date: "31.01-02.02.2026", type: "PODSTAWOWY", note: "WEEKEND", spots: 6, price: 1200 },
-  { id: "podstawowy-02-04-02", date: "02-04.02.2026", type: "PODSTAWOWY", note: "", spots: 8, price: 1200 },
-  { id: "podstawowy-09-11-02", date: "09-11.02.2026", type: "PODSTAWOWY", note: "", spots: 10, price: 1200 },
-  { id: "cysterny-12-13-02", date: "12-13.02.2026", type: "CYSTERNY", note: "specjalistyczny", spots: 7, price: 600 },
-  { id: "podstawowy-14-16-02", date: "14-16.02.2026", type: "PODSTAWOWY", note: "WEEKEND", spots: 4, price: 1200 },
-];
+// Pobierz dzisiejszą datę (początek dnia)
+const today = new Date();
+today.setHours(0, 0, 0, 0);
+const todayISO = today.toISOString().split('T')[0];
+
+// Pobierz kursy z bazy - tylko otwarte i gdzie endDate >= dzisiaj (kurs widoczny w dniu trwania)
+const dbCourses = await db.select()
+  .from(coursesTable)
+  .where(
+    and(
+      eq(coursesTable.status, 'open'),
+      gte(coursesTable.endDate, todayISO)
+    )
+  )
+  .orderBy(asc(coursesTable.startDate));
+
+// Pobierz liczbę rezerwacji per kurs (tylko niepotwierdzone/niepłatne)
+const reservationCounts = await db.select({
+  courseId: reservations.courseId,
+  count: sql<number>`count(*)`.as('count')
+})
+  .from(reservations)
+  .where(
+    and(
+      sql`${reservations.status} NOT IN ('cancelled', 'no_show')`
+    )
+  )
+  .groupBy(reservations.courseId);
+
+const reservationMap = new Map(reservationCounts.map(r => [r.courseId, r.count]));
+
+// Formatuj daty i przygotuj dane dla frontendu
+function formatDateRange(startDate: string, endDate: string): string {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  
+  const startDay = start.getDate().toString().padStart(2, '0');
+  const endDay = end.getDate().toString().padStart(2, '0');
+  const startMonth = (start.getMonth() + 1).toString().padStart(2, '0');
+  const endMonth = (end.getMonth() + 1).toString().padStart(2, '0');
+  const year = end.getFullYear();
+  
+  if (startMonth === endMonth) {
+    return `${startDay}-${endDay}.${endMonth}.${year}`;
+  } else {
+    return `${startDay}.${startMonth}-${endDay}.${endMonth}.${year}`;
+  }
+}
+
+function isWeekend(startDate: string): boolean {
+  const start = new Date(startDate);
+  const day = start.getDay();
+  return day === 5 || day === 6 || day === 0; // Pt, Sob, Nd
+}
+
+function getCourseTypeLabel(type: string): string {
+  const labels: Record<string, string> = {
+    'podstawowy': 'PODSTAWOWY',
+    'cysterny': 'CYSTERNY',
+    'klasa1': 'KLASA 1',
+    'klasa7': 'KLASA 7',
+    'odnowienie': 'ODNOWIENIE',
+  };
+  return labels[type] || type.toUpperCase();
+}
+
+function getCourseNote(type: string, startDate: string): string {
+  if (isWeekend(startDate)) return 'WEEKEND';
+  if (type === 'cysterny' || type === 'klasa1' || type === 'klasa7') return 'specjalistyczny';
+  return '';
+}
+
+function getDurationDays(startDate: string, endDate: string): number {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const diffTime = Math.abs(end.getTime() - start.getTime());
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+}
+
+// Transformuj kursy do formatu frontendu
+const courses = dbCourses.map(course => {
+  const reservedCount = reservationMap.get(course.id) || 0;
+  const availableSpots = (course.maxParticipants || 15) - reservedCount;
+  
+  return {
+    id: course.id.toString(),
+    date: formatDateRange(course.startDate, course.endDate),
+    type: getCourseTypeLabel(course.courseType),
+    note: getCourseNote(course.courseType, course.startDate),
+    spots: Math.max(0, availableSpots),
+    price: course.price || 0,
+    days: getDurationDays(course.startDate, course.endDate),
+  };
+});
 
 const nextCourses = courses.slice(0, 3);
 ---
@@ -162,7 +249,7 @@ const nextCourses = courses.slice(0, 3);
             
             {/* Date + Duration */}
             <div class="text-gray-500 text-[11px] md:text-sm mb-2 md:mb-3">
-              {course.date} • {course.type === 'CYSTERNY' ? '2 dni' : '3 dni'}
+              {course.date} • {course.days} {course.days === 1 ? 'dzień' : 'dni'}
             </div>
             
             {/* Separator */}
