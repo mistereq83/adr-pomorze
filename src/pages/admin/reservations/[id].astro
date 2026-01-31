@@ -1,0 +1,314 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { db } from '../../../db';
+import { courses, participants, reservations } from '../../../db/schema';
+import { eq } from 'drizzle-orm';
+
+const { id } = Astro.params;
+
+if (!id) {
+  return Astro.redirect('/admin/reservations');
+}
+
+// Pobierz rezerwację z kursem i uczestnikiem
+const reservation = await db.select()
+  .from(reservations)
+  .where(eq(reservations.id, parseInt(id)))
+  .get();
+
+if (!reservation) {
+  return Astro.redirect('/admin/reservations');
+}
+
+const course = await db.select()
+  .from(courses)
+  .where(eq(courses.id, reservation.courseId))
+  .get();
+
+const participant = await db.select()
+  .from(participants)
+  .where(eq(participants.id, reservation.participantId))
+  .get();
+
+// Obsługa aktualizacji
+let message = '';
+if (Astro.request.method === 'POST') {
+  try {
+    const formData = await Astro.request.formData();
+    const action = formData.get('action');
+    
+    if (action === 'update_status') {
+      await db.update(reservations)
+        .set({ status: formData.get('status') as string })
+        .where(eq(reservations.id, parseInt(id)));
+      message = 'Status zaktualizowany';
+    } else if (action === 'update_payment') {
+      await db.update(reservations)
+        .set({ paymentStatus: formData.get('paymentStatus') as string })
+        .where(eq(reservations.id, parseInt(id)));
+      message = 'Status płatności zaktualizowany';
+    } else if (action === 'delete') {
+      await db.delete(reservations).where(eq(reservations.id, parseInt(id)));
+      return Astro.redirect('/admin/reservations');
+    }
+    
+    // Odśwież dane
+    return Astro.redirect(`/admin/reservations/${id}?msg=updated`);
+  } catch (e) {
+    console.error(e);
+    message = 'Błąd podczas aktualizacji';
+  }
+}
+
+if (Astro.url.searchParams.get('msg') === 'updated') {
+  message = 'Dane zaktualizowane';
+}
+
+const statusColors: Record<string, string> = {
+  pending: 'bg-yellow-100 text-yellow-800',
+  confirmed: 'bg-green-100 text-green-800',
+  cancelled: 'bg-red-100 text-red-800',
+};
+
+const paymentColors: Record<string, string> = {
+  unpaid: 'bg-red-100 text-red-800',
+  paid: 'bg-green-100 text-green-800',
+  partial: 'bg-yellow-100 text-yellow-800',
+};
+
+const statusLabels: Record<string, string> = {
+  pending: 'Oczekująca',
+  confirmed: 'Potwierdzona',
+  cancelled: 'Anulowana',
+};
+
+const paymentLabels: Record<string, string> = {
+  unpaid: 'Nieopłacone',
+  paid: 'Opłacone',
+  partial: 'Częściowo opłacone',
+};
+---
+
+<AdminLayout title={`Rezerwacja #${id}`}>
+  <div class="max-w-4xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+      <h1 class="text-2xl font-bold text-gray-900">Szczegóły rezerwacji #{id}</h1>
+      <a href="/admin/reservations" class="text-gray-600 hover:text-gray-900">
+        ← Powrót do listy
+      </a>
+    </div>
+
+    {message && (
+      <div class="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-800">
+        {message}
+      </div>
+    )}
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Informacje o uczestniku -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+          <span class="text-2xl">👤</span> Uczestnik
+        </h2>
+        {participant ? (
+          <dl class="space-y-3">
+            <div>
+              <dt class="text-sm text-gray-500">Imię i nazwisko</dt>
+              <dd class="font-medium">{participant.firstName} {participant.lastName}</dd>
+            </div>
+            <div>
+              <dt class="text-sm text-gray-500">Telefon</dt>
+              <dd class="font-medium">
+                <a href={`tel:${participant.phone}`} class="text-orange-600 hover:underline">
+                  {participant.phone}
+                </a>
+              </dd>
+            </div>
+            {participant.email && (
+              <div>
+                <dt class="text-sm text-gray-500">Email</dt>
+                <dd class="font-medium">
+                  <a href={`mailto:${participant.email}`} class="text-orange-600 hover:underline">
+                    {participant.email}
+                  </a>
+                </dd>
+              </div>
+            )}
+            {participant.pesel && (
+              <div>
+                <dt class="text-sm text-gray-500">PESEL</dt>
+                <dd class="font-medium font-mono">{participant.pesel}</dd>
+              </div>
+            )}
+            <div>
+              <dt class="text-sm text-gray-500">Aktualne ADR</dt>
+              <dd class="font-medium">
+                {participant.hasCurrentAdr ? (
+                  <span class="text-green-600">Tak {participant.currentAdrNumber && `(${participant.currentAdrNumber})`}</span>
+                ) : (
+                  <span class="text-gray-500">Nie</span>
+                )}
+              </dd>
+            </div>
+          </dl>
+        ) : (
+          <p class="text-gray-500">Brak danych uczestnika</p>
+        )}
+      </div>
+
+      <!-- Informacje o kursie -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+          <span class="text-2xl">📚</span> Kurs
+        </h2>
+        {course ? (
+          <dl class="space-y-3">
+            <div>
+              <dt class="text-sm text-gray-500">Typ kursu</dt>
+              <dd class="font-medium capitalize">{course.type === 'podstawowy' ? 'Podstawowy' : 'Przedłużenie'}</dd>
+            </div>
+            <div>
+              <dt class="text-sm text-gray-500">Data rozpoczęcia</dt>
+              <dd class="font-medium">{new Date(course.startDate).toLocaleDateString('pl-PL')}</dd>
+            </div>
+            <div>
+              <dt class="text-sm text-gray-500">Data zakończenia</dt>
+              <dd class="font-medium">{new Date(course.endDate).toLocaleDateString('pl-PL')}</dd>
+            </div>
+            <div>
+              <dt class="text-sm text-gray-500">Cena</dt>
+              <dd class="font-medium text-lg">{course.price} zł</dd>
+            </div>
+            <div>
+              <dt class="text-sm text-gray-500">Miejsca</dt>
+              <dd class="font-medium">{course.spotsAvailable} / {course.maxParticipants}</dd>
+            </div>
+          </dl>
+        ) : (
+          <p class="text-gray-500">Brak danych kursu</p>
+        )}
+      </div>
+
+      <!-- Status rezerwacji -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+          <span class="text-2xl">📋</span> Status rezerwacji
+        </h2>
+        <div class="space-y-4">
+          <div>
+            <span class="text-sm text-gray-500">Aktualny status:</span>
+            <span class={`ml-2 px-3 py-1 rounded-full text-sm font-medium ${statusColors[reservation.status] || 'bg-gray-100'}`}>
+              {statusLabels[reservation.status] || reservation.status}
+            </span>
+          </div>
+          <form method="POST" class="flex gap-2">
+            <input type="hidden" name="action" value="update_status" />
+            <select name="status" class="flex-1 rounded-lg border-gray-300 text-sm">
+              <option value="pending" selected={reservation.status === 'pending'}>Oczekująca</option>
+              <option value="confirmed" selected={reservation.status === 'confirmed'}>Potwierdzona</option>
+              <option value="cancelled" selected={reservation.status === 'cancelled'}>Anulowana</option>
+            </select>
+            <button type="submit" class="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800">
+              Zmień
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Status płatności -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+          <span class="text-2xl">💳</span> Płatność
+        </h2>
+        <div class="space-y-4">
+          <div>
+            <span class="text-sm text-gray-500">Status płatności:</span>
+            <span class={`ml-2 px-3 py-1 rounded-full text-sm font-medium ${paymentColors[reservation.paymentStatus] || 'bg-gray-100'}`}>
+              {paymentLabels[reservation.paymentStatus] || reservation.paymentStatus}
+            </span>
+          </div>
+          {reservation.paymentMethod && (
+            <div>
+              <span class="text-sm text-gray-500">Metoda płatności:</span>
+              <span class="ml-2 font-medium">{reservation.paymentMethod}</span>
+            </div>
+          )}
+          <form method="POST" class="flex gap-2">
+            <input type="hidden" name="action" value="update_payment" />
+            <select name="paymentStatus" class="flex-1 rounded-lg border-gray-300 text-sm">
+              <option value="unpaid" selected={reservation.paymentStatus === 'unpaid'}>Nieopłacone</option>
+              <option value="partial" selected={reservation.paymentStatus === 'partial'}>Częściowo opłacone</option>
+              <option value="paid" selected={reservation.paymentStatus === 'paid'}>Opłacone</option>
+            </select>
+            <button type="submit" class="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800">
+              Zmień
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Dane do faktury -->
+      {reservation.needsInvoice && (
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:col-span-2">
+          <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+            <span class="text-2xl">🧾</span> Dane do faktury
+          </h2>
+          <dl class="grid grid-cols-2 gap-4">
+            <div>
+              <dt class="text-sm text-gray-500">Firma</dt>
+              <dd class="font-medium">{reservation.invoiceCompany || '-'}</dd>
+            </div>
+            <div>
+              <dt class="text-sm text-gray-500">NIP</dt>
+              <dd class="font-medium font-mono">{reservation.invoiceNip || '-'}</dd>
+            </div>
+          </dl>
+        </div>
+      )}
+
+      <!-- Notatki i metadane -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:col-span-2">
+        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+          <span class="text-2xl">📝</span> Dodatkowe informacje
+        </h2>
+        <dl class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <dt class="text-sm text-gray-500">Źródło</dt>
+            <dd class="font-medium capitalize">{reservation.source === 'manual' ? 'Ręcznie' : reservation.source}</dd>
+          </div>
+          <div>
+            <dt class="text-sm text-gray-500">Data zgłoszenia</dt>
+            <dd class="font-medium">{new Date(reservation.createdAt).toLocaleDateString('pl-PL')}</dd>
+          </div>
+          <div>
+            <dt class="text-sm text-gray-500">Faktura</dt>
+            <dd class="font-medium">{reservation.needsInvoice ? 'Tak' : 'Nie'}</dd>
+          </div>
+          <div>
+            <dt class="text-sm text-gray-500">ID rezerwacji</dt>
+            <dd class="font-medium font-mono">#{reservation.id}</dd>
+          </div>
+        </dl>
+        {reservation.notes && (
+          <div class="mt-4 pt-4 border-t">
+            <dt class="text-sm text-gray-500 mb-1">Notatki</dt>
+            <dd class="text-gray-700 whitespace-pre-wrap">{reservation.notes}</dd>
+          </div>
+        )}
+      </div>
+    </div>
+
+    <!-- Akcje -->
+    <div class="mt-6 flex justify-between items-center">
+      <form method="POST" onsubmit="return confirm('Czy na pewno chcesz usunąć tę rezerwację?')">
+        <input type="hidden" name="action" value="delete" />
+        <button type="submit" class="px-4 py-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors">
+          🗑️ Usuń rezerwację
+        </button>
+      </form>
+      <a href="/admin/reservations" class="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+        Powrót do listy
+      </a>
+    </div>
+  </div>
+</AdminLayout>
