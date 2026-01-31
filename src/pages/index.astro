@@ -138,10 +138,10 @@ const nextCourses = courses.slice(0, 3);
       </div>
       
       <!-- Course cards with select buttons -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6" id="courses-grid">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4 mb-6" id="courses-grid">
         {courses.map((course) => (
           <div 
-            class="course-card bg-white rounded-xl p-4 border-2 border-gray-200 transition-all hover:shadow-lg cursor-pointer group"
+            class="course-card bg-white rounded-lg md:rounded-xl p-2.5 md:p-4 border-2 border-gray-200 transition-all hover:shadow-lg cursor-pointer group"
             data-id={course.id}
             data-date={course.date}
             data-type={course.type}
@@ -149,33 +149,33 @@ const nextCourses = courses.slice(0, 3);
             data-note={course.note}
           >
             {/* Header: Typ + Badge */}
-            <div class="flex items-center justify-between mb-2">
-              <span class={`font-bold text-base ${course.type === 'CYSTERNY' ? 'text-[var(--accent)]' : 'text-[var(--primary)]'}`}>
+            <div class="flex items-center justify-between mb-1 md:mb-2">
+              <span class={`font-bold text-xs md:text-base ${course.type === 'CYSTERNY' ? 'text-[var(--accent)]' : 'text-[var(--primary)]'}`}>
                 {course.type}
               </span>
               {course.note && (
-                <span class={`text-[10px] font-bold px-2 py-0.5 rounded ${course.note === 'WEEKEND' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
+                <span class={`text-[8px] md:text-[10px] font-bold px-1.5 md:px-2 py-0.5 rounded ${course.note === 'WEEKEND' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
                   {course.note === 'WEEKEND' ? 'WKD' : 'SPEC'}
                 </span>
               )}
             </div>
             
             {/* Date + Duration */}
-            <div class="text-gray-500 text-sm mb-3">
+            <div class="text-gray-500 text-[11px] md:text-sm mb-2 md:mb-3">
               {course.date} • {course.type === 'CYSTERNY' ? '2 dni' : '3 dni'}
             </div>
             
             {/* Separator */}
-            <div class="border-t border-gray-100 my-3"></div>
+            <div class="border-t border-gray-100 my-2 md:my-3"></div>
             
             {/* Price + Spots + Button */}
             <div class="flex items-center justify-between">
               <div>
-                <div class="text-lg font-bold text-[var(--primary)]">{course.price} zł</div>
-                <div class="text-xs text-[var(--success)]">{course.spots} miejsc</div>
+                <div class="text-sm md:text-lg font-bold text-[var(--primary)]">{course.price} zł</div>
+                <div class="text-[10px] md:text-xs text-[var(--success)]">{course.spots} msc</div>
               </div>
               <button 
-                class="add-course-btn px-4 py-2 rounded-lg font-semibold text-sm transition-all
+                class="add-course-btn px-2 md:px-4 py-1.5 md:py-2 rounded-md md:rounded-lg font-semibold text-[10px] md:text-sm transition-all
                        bg-gray-100 text-gray-700 hover:bg-[var(--accent)] hover:text-white"
               >
                 <span class="btn-text">+ Dodaj</span>
