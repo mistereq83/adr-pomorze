@@ -74,14 +74,52 @@ function formatDate(dateStr: string | null) {
     {search ? `Znaleziono: ${allParticipants.length} uczestników` : `Łącznie: ${allParticipants.length} uczestników`}
   </p>
   
-  <div class="bg-white rounded-xl shadow-sm overflow-x-auto">
-    <table class="w-full min-w-[800px]">
+  <!-- Mobile: Card View -->
+  <div class="md:hidden space-y-3">
+    {participantsWithCounts.length === 0 ? (
+      <div class="bg-white rounded-xl p-6 text-center text-gray-500">
+        {search ? 'Nie znaleziono uczestników' : 'Brak uczestników w bazie'}
+      </div>
+    ) : (
+      participantsWithCounts.map((p) => (
+        <a href={`/admin/participants/${p.id}`} class="block bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:border-[var(--accent)] transition-colors">
+          <div class="flex items-start justify-between mb-2">
+            <div>
+              <div class="font-bold text-[var(--primary)]">{p.lastName} {p.firstName}</div>
+              <a href={`tel:${p.phone}`} class="text-sm text-[var(--accent)] font-mono">{p.phone}</a>
+            </div>
+            <div class="flex items-center gap-2">
+              {p.hasCurrentAdr ? (
+                <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">ADR ✓</span>
+              ) : (
+                <span class="px-2 py-1 bg-gray-100 text-gray-500 rounded text-xs">brak ADR</span>
+              )}
+              {p.reservationCount > 0 && (
+                <span class="px-2 py-1 bg-[var(--accent)]/10 text-[var(--accent)] rounded text-xs font-bold">
+                  {p.reservationCount} szk.
+                </span>
+              )}
+            </div>
+          </div>
+          {(p.email || p.city) && (
+            <div class="text-xs text-gray-500 flex flex-wrap gap-2">
+              {p.email && <span>{p.email}</span>}
+              {p.city && <span>📍 {p.city}</span>}
+            </div>
+          )}
+        </a>
+      ))
+    )}
+  </div>
+  
+  <!-- Desktop: Table View -->
+  <div class="hidden md:block bg-white rounded-xl shadow-sm overflow-x-auto">
+    <table class="w-full">
       <thead class="bg-gray-50 border-b">
         <tr>
           <th class="text-left p-4 font-medium text-gray-700">Nazwisko i imię</th>
           <th class="text-left p-4 font-medium text-gray-700">Telefon</th>
           <th class="text-left p-4 font-medium text-gray-700">Email</th>
-          <th class="text-left p-4 font-medium text-gray-700">PESEL</th>
           <th class="text-left p-4 font-medium text-gray-700">ADR</th>
           <th class="text-left p-4 font-medium text-gray-700">Szkoleń</th>
           <th class="text-left p-4 font-medium text-gray-700">Akcje</th>
@@ -90,7 +128,7 @@ function formatDate(dateStr: string | null) {
       <tbody class="divide-y">
         {participantsWithCounts.length === 0 ? (
           <tr>
-            <td colspan="7" class="p-8 text-center text-gray-500">
+            <td colspan="6" class="p-8 text-center text-gray-500">
               {search ? 'Nie znaleziono uczestników' : 'Brak uczestników w bazie'}
             </td>
           </tr>
@@ -101,9 +139,10 @@ function formatDate(dateStr: string | null) {
                 <div class="font-medium">{p.lastName} {p.firstName}</div>
                 {p.city && <div class="text-sm text-gray-500">{p.city}</div>}
               </td>
-              <td class="p-4 font-mono text-sm">{p.phone}</td>
+              <td class="p-4">
+                <a href={`tel:${p.phone}`} class="font-mono text-sm text-[var(--accent)] hover:underline">{p.phone}</a>
+              </td>
               <td class="p-4 text-sm">{p.email || '-'}</td>
-              <td class="p-4 font-mono text-sm">{p.pesel || '-'}</td>
               <td class="p-4">
                 {p.hasCurrentAdr ? (
                   <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">TAK</span>
@@ -117,17 +156,11 @@ function formatDate(dateStr: string | null) {
                 </span>
               </td>
               <td class="p-4">
-                <div class="flex items-center gap-2">
-                  <a 
-                    href={`/admin/participants/${p.id}`} 
-                    class="text-[var(--accent)] hover:underline text-sm"
-                  >
+                <div class="flex items-center gap-3">
+                  <a href={`/admin/participants/${p.id}`} class="text-[var(--accent)] hover:underline text-sm font-medium">
                     Edytuj
                   </a>
-                  <a 
-                    href={`/admin/reservations/new?participantId=${p.id}`} 
-                    class="text-blue-600 hover:underline text-sm"
-                  >
+                  <a href={`/admin/reservations/new?participantId=${p.id}`} class="text-blue-600 hover:underline text-sm">
                     + Rezerwacja
                   </a>
                 </div>
