@@ -1,0 +1,156 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description = "Szkolenia ADR i doradztwo DGSA na Pomorzu. 15 lat doświadczenia. Ponad 5000 przeszkolonych kierowców." } = Astro.props;
+---
+
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    
+    <title>{title}</title>
+  </head>
+  <body class="min-h-screen">
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100">
+      <div class="container-custom flex items-center justify-between h-16 md:h-20 px-4 md:px-8">
+        <a href="/" class="flex items-center gap-2">
+          <div class="w-10 h-10 bg-[var(--accent)] rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <span class="font-bold text-lg text-[var(--primary)]">ADR Pomorze</span>
+        </a>
+        
+        <div class="hidden md:flex items-center gap-8">
+          <a href="#szkolenia" class="text-gray-600 hover:text-[var(--accent)] transition-colors font-medium">Szkolenia</a>
+          <a href="#doradztwo" class="text-gray-600 hover:text-[var(--accent)] transition-colors font-medium">Doradztwo</a>
+          <a href="#przepisy" class="text-gray-600 hover:text-[var(--accent)] transition-colors font-medium">Przepisy</a>
+          <a href="#kontakt" class="text-gray-600 hover:text-[var(--accent)] transition-colors font-medium">Kontakt</a>
+        </div>
+        
+        <a href="tel:+48502611639" class="btn-primary hidden md:flex gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+          </svg>
+          502 611 639
+        </a>
+        
+        <!-- Mobile menu button -->
+        <button class="md:hidden p-2" id="mobile-menu-btn">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </div>
+    </nav>
+    
+    <!-- Mobile Menu -->
+    <div id="mobile-menu" class="fixed inset-0 bg-white z-40 hidden pt-20 px-4">
+      <div class="flex flex-col gap-4">
+        <a href="#szkolenia" class="text-xl font-medium py-3 border-b">Szkolenia</a>
+        <a href="#doradztwo" class="text-xl font-medium py-3 border-b">Doradztwo</a>
+        <a href="#przepisy" class="text-xl font-medium py-3 border-b">Przepisy</a>
+        <a href="#kontakt" class="text-xl font-medium py-3 border-b">Kontakt</a>
+        <a href="tel:+48502611639" class="btn-primary mt-4 text-center">
+          Zadzwoń: 502 611 639
+        </a>
+      </div>
+    </div>
+    
+    <main class="pt-16 md:pt-20">
+      <slot />
+    </main>
+    
+    <!-- Footer -->
+    <footer class="bg-[var(--primary)] text-white py-12 md:py-16">
+      <div class="container-custom px-4 md:px-8">
+        <div class="grid md:grid-cols-4 gap-8">
+          <div>
+            <div class="flex items-center gap-2 mb-4">
+              <div class="w-10 h-10 bg-[var(--accent)] rounded-lg flex items-center justify-center">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <span class="font-bold text-lg">ADR Pomorze</span>
+            </div>
+            <p class="text-gray-400 text-sm">Tomasz Bronk - Doradca DGSA<br>Szkolenia ADR na Pomorzu</p>
+          </div>
+          
+          <div>
+            <h4 class="font-semibold mb-4">Oferta</h4>
+            <ul class="space-y-2 text-gray-400 text-sm">
+              <li><a href="#szkolenia" class="hover:text-white transition-colors">Szkolenia kierowców ADR</a></li>
+              <li><a href="#doradztwo" class="hover:text-white transition-colors">Doradztwo DGSA</a></li>
+              <li><a href="#szkolenia" class="hover:text-white transition-colors">Szkolenia firmowe</a></li>
+            </ul>
+          </div>
+          
+          <div>
+            <h4 class="font-semibold mb-4">Informacje</h4>
+            <ul class="space-y-2 text-gray-400 text-sm">
+              <li><a href="#przepisy" class="hover:text-white transition-colors">Przepisy prawne</a></li>
+              <li><a href="#kary" class="hover:text-white transition-colors">Kary i mandaty</a></li>
+              <li><a href="#faq" class="hover:text-white transition-colors">FAQ</a></li>
+            </ul>
+          </div>
+          
+          <div>
+            <h4 class="font-semibold mb-4">Kontakt</h4>
+            <ul class="space-y-2 text-gray-400 text-sm">
+              <li class="flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+                <a href="tel:+48502611639" class="hover:text-white">+48 502 611 639</a>
+              </li>
+              <li class="flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <a href="mailto:t.bronk@adr-pomorze.pl" class="hover:text-white">t.bronk@adr-pomorze.pl</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400 text-sm">
+          © 2026 Tomasz Bronk - ADR Pomorze. Wszelkie prawa zastrzeżone.
+        </div>
+      </div>
+    </footer>
+    
+    <script>
+      const menuBtn = document.getElementById('mobile-menu-btn');
+      const mobileMenu = document.getElementById('mobile-menu');
+      
+      menuBtn?.addEventListener('click', () => {
+        mobileMenu?.classList.toggle('hidden');
+      });
+      
+      // Close menu when clicking a link
+      mobileMenu?.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', () => {
+          mobileMenu?.classList.add('hidden');
+        });
+      });
+    </script>
+  </body>
+</html>
