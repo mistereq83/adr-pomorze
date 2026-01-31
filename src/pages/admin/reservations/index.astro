@@ -86,49 +86,29 @@ function formatDate(dateStr: string | null) {
     </div>
   ) : (
     <div class="space-y-3">
-      {allReservations.map((r) => (
-        <a 
-          href={`/admin/reservations/${r.reservation.id}`}
-          class="block bg-white rounded-xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow"
-        >
-          <div class="flex items-start justify-between gap-3">
-            <div class="flex-1 min-w-0">
-              <div class="font-semibold text-gray-900 truncate">
+      {allReservations.map((r) => {
+        const badge = getStatusBadge(r.reservation.status);
+        const courseDate = r.course ? formatDate(r.course.startDate) : null;
+        const courseType = r.course?.courseType || '';
+        return (
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between gap-3 mb-2">
+              <a href={`/admin/reservations/${r.reservation.id}`} class="font-semibold text-gray-900 hover:text-[var(--accent)]">
                 {r.participant?.firstName} {r.participant?.lastName}
-              </div>
-              <div class="text-sm text-gray-500 mt-0.5">
-                <a href={`tel:${r.participant?.phone}`} class="hover:text-[var(--accent)]" onclick="event.stopPropagation()">
-                  {r.participant?.phone}
-                </a>
-              </div>
+              </a>
+              <span class={`px-2 py-1 rounded text-xs font-medium ${badge.class}`}>
+                {badge.label}
+              </span>
             </div>
-            <select 
-              class={`px-2 py-1 rounded text-xs font-medium border-0 cursor-pointer ${getStatusBadge(r.reservation.status).class}`}
-              data-reservation-id={r.reservation.id}
-              data-field="status"
-              onchange="updateReservation(this)"
-              onclick="event.preventDefault(); event.stopPropagation();"
-            >
-              <option value="pending" selected={r.reservation.status === 'pending'}>Oczekuje</option>
-              <option value="confirmed" selected={r.reservation.status === 'confirmed'}>Potwierdzona</option>
-              <option value="paid" selected={r.reservation.status === 'paid'}>Opłacona</option>
-              <option value="completed" selected={r.reservation.status === 'completed'}>Zakończona</option>
-              <option value="cancelled" selected={r.reservation.status === 'cancelled'}>Anulowana</option>
-              <option value="no_show" selected={r.reservation.status === 'no_show'}>Nieobecność</option>
-            </select>
+            <div class="flex items-center justify-between text-sm text-gray-500">
+              <span>{r.participant?.phone}</span>
+              {courseDate && (
+                <span>📅 {courseDate} · {courseType}</span>
+              )}
+            </div>
           </div>
-          
-          {r.course && (
-            <div class="mt-3 pt-3 border-t border-gray-100 flex items-center gap-4 text-sm">
-              <div class="flex items-center gap-1.5">
-                <span class="text-gray-400">📅</span>
-                <span class="font-medium">{formatDate(r.course.startDate)}</span>
-              </div>
-              <div class="text-gray-500 capitalize">{r.course.courseType}</div>
-            </div>
-          )}
-        </a>
-      ))}
+        );
+      })}
     </div>
   )}
 </AdminLayout>
