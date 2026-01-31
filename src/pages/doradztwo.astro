@@ -146,14 +146,14 @@ const penalties = [
         </p>
       </div>
       
-      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
         {services.map(service => (
-          <div class="bg-white rounded-xl p-6 border border-gray-100 hover:border-[var(--success)] hover:shadow-lg transition-all group">
-            <div class="w-12 h-12 bg-[var(--success)]/10 rounded-xl flex items-center justify-center mb-4 text-[var(--success)] group-hover:bg-[var(--success)] group-hover:text-white transition-colors">
+          <div class="bg-white rounded-xl p-4 md:p-6 border border-gray-100 hover:border-[var(--success)] hover:shadow-lg transition-all group">
+            <div class="w-10 h-10 md:w-12 md:h-12 bg-[var(--success)]/10 rounded-xl flex items-center justify-center mb-3 md:mb-4 text-[var(--success)] group-hover:bg-[var(--success)] group-hover:text-white transition-colors">
               <Fragment set:html={service.icon} />
             </div>
-            <h3 class="text-lg font-bold text-[var(--primary)] mb-2">{service.title}</h3>
-            <p class="text-gray-600 text-sm">{service.desc}</p>
+            <h3 class="text-sm md:text-lg font-bold text-[var(--primary)] mb-1 md:mb-2">{service.title}</h3>
+            <p class="text-gray-600 text-xs md:text-sm line-clamp-3 md:line-clamp-none">{service.desc}</p>
           </div>
         ))}
       </div>
