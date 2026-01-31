@@ -590,6 +590,15 @@ const nextCourses = courses.slice(0, 3);
         card.classList.remove('selected');
         btnText.textContent = '+ Dodaj';
       } else {
+        // Sprawdź czy już jest kurs tego samego typu w koszyku
+        const courseType = card.dataset.type;
+        const existingSameType = Array.from(cart.values()).find(c => c.type === courseType);
+        
+        if (existingSameType) {
+          alert(`Masz już w koszyku kurs ${courseType} (${existingSameType.date}). Możesz wybrać tylko jeden termin danego typu szkolenia.`);
+          return;
+        }
+        
         cart.set(id, {
           id,
           date: card.dataset.date,
@@ -624,10 +633,11 @@ const nextCourses = courses.slice(0, 3);
     
     // Show/hide cart bar
     if (count > 0) {
-      cartBar.classList.add('visible');
+      cartBar.style.transform = 'translateY(0)';
+      cartBar.style.display = 'block';
       cartSpacer.style.height = '80px';
     } else {
-      cartBar.classList.remove('visible');
+      cartBar.style.transform = 'translateY(100%)';
       cartSpacer.style.height = '0';
     }
   }
