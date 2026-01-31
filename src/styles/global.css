@@ -85,11 +85,11 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .section-padding {
-  padding: 4rem 1rem;
+  padding: 2rem 1rem;
 }
 @media (min-width: 768px) {
   .section-padding {
-    padding: 6rem 2rem;
+    padding: 5rem 2rem;
   }
 }
 

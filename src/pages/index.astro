@@ -93,27 +93,27 @@ const penalties = [
           </div>
         </div>
         
-        <!-- Right: Next courses - VISIBLE ON MOBILE -->
-        <div class="bg-white/10 backdrop-blur-md rounded-2xl p-4 md:p-6 border border-white/20">
-          <div class="flex items-center gap-2 mb-4">
-            <span class="w-3 h-3 bg-[var(--success)] rounded-full animate-pulse"></span>
-            <h2 class="text-white font-bold text-lg">Najbliższe terminy</h2>
+        <!-- Right: Next courses - COMPACT ON MOBILE -->
+        <div class="bg-white/10 backdrop-blur-md rounded-xl p-3 md:p-6 border border-white/20">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="w-2 h-2 bg-[var(--success)] rounded-full animate-pulse"></span>
+            <h2 class="text-white font-bold text-base md:text-lg">Najbliższe terminy</h2>
           </div>
           
-          <div class="space-y-3">
+          <div class="space-y-2">
             {nextCourses.map((course) => (
-              <a href="#szkolenia" class="block bg-white/10 hover:bg-white/20 rounded-xl p-4 transition-all group">
-                <div class="flex items-center justify-between">
-                  <div>
-                    <div class="font-mono text-lg font-bold text-white">{course.date}</div>
-                    <div class="text-gray-300 text-sm">
-                      Kurs {course.type.toLowerCase()}
-                      {course.note && <span class="text-[var(--accent)] ml-2">• {course.note}</span>}
+              <a href="#szkolenia" class="block bg-white/10 hover:bg-white/20 rounded-lg p-3 transition-all group">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="min-w-0">
+                    <div class="font-mono text-sm md:text-base font-bold text-white">{course.date}</div>
+                    <div class="text-gray-300 text-xs md:text-sm truncate">
+                      {course.type}
+                      {course.note && <span class="text-[var(--accent)] ml-1">• {course.note}</span>}
                     </div>
                   </div>
-                  <div class="text-right">
-                    <div class="text-[var(--success)] text-sm font-medium">{course.spots} miejsc</div>
-                    <svg class="w-5 h-5 text-white/50 group-hover:text-white group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div class="flex items-center gap-2 flex-shrink-0">
+                    <span class="text-[var(--success)] text-xs font-medium">{course.spots} msc</span>
+                    <svg class="w-4 h-4 text-white/50 group-hover:text-white transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                     </svg>
                   </div>
@@ -122,8 +122,8 @@ const penalties = [
             ))}
           </div>
           
-          <a href="#szkolenia" class="block text-center text-white/70 hover:text-white mt-4 text-sm font-medium">
-            Zobacz wszystkie terminy →
+          <a href="#szkolenia" class="block text-center text-white/70 hover:text-white mt-3 text-xs md:text-sm font-medium">
+            Wszystkie terminy ↓
           </a>
         </div>
       </div>
@@ -145,25 +145,22 @@ const penalties = [
         </p>
       </div>
       
-      <!-- Course cards -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <!-- Course cards - 2 columns on mobile -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4 mb-6">
         {courses.map((course) => (
-          <div class={`bg-white rounded-xl p-5 border-2 transition-all hover:shadow-lg cursor-pointer group ${course.type === 'CYSTERNY' ? 'border-[var(--accent)]' : 'border-gray-200 hover:border-[var(--success)]'}`}>
-            <div class="flex items-start justify-between mb-3">
-              <div class="font-mono text-lg font-bold text-[var(--primary)]">{course.date}</div>
+          <div class={`bg-white rounded-lg md:rounded-xl p-3 md:p-4 border-2 transition-all hover:shadow-lg cursor-pointer group ${course.type === 'CYSTERNY' ? 'border-[var(--accent)]' : 'border-gray-200 hover:border-[var(--success)]'}`}>
+            <div class="flex items-start justify-between mb-1 md:mb-2">
+              <div class="font-mono text-xs md:text-base font-bold text-[var(--primary)]">{course.date}</div>
               {course.note && (
-                <span class={`text-xs font-bold px-2 py-1 rounded ${course.note === 'WEEKEND' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
-                  {course.note}
+                <span class={`text-[10px] md:text-xs font-bold px-1 md:px-2 py-0.5 rounded ${course.note === 'WEEKEND' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
+                  {course.note === 'WEEKEND' ? 'WKD' : 'SPEC'}
                 </span>
               )}
             </div>
-            <div class={`font-semibold mb-2 ${course.type === 'CYSTERNY' ? 'text-[var(--accent)]' : 'text-gray-700'}`}>
-              Kurs {course.type}
+            <div class={`font-semibold text-xs md:text-sm mb-1 ${course.type === 'CYSTERNY' ? 'text-[var(--accent)]' : 'text-gray-700'}`}>
+              {course.type}
             </div>
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-[var(--success)]">{course.spots} wolnych miejsc</span>
-              <span class="text-sm text-gray-400 group-hover:text-[var(--accent)] transition-colors">Zapisz się →</span>
-            </div>
+            <div class="text-[10px] md:text-sm text-[var(--success)]">{course.spots} miejsc</div>
           </div>
         ))}
       </div>
@@ -217,17 +214,17 @@ const penalties = [
         </h2>
       </div>
       
-      <div class="grid md:grid-cols-2 gap-6 md:gap-8">
-        <!-- For Drivers -->
-        <div class="card group border-2 border-transparent hover:border-[var(--accent)]">
-          <div class="w-14 h-14 bg-[var(--accent)]/10 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-[var(--accent)] transition-colors">
-            <svg class="w-7 h-7 text-[var(--accent)] group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="grid grid-cols-2 gap-3 md:gap-6">
+        <!-- For Drivers - Compact on mobile -->
+        <div class="card group border-2 border-transparent hover:border-[var(--accent)] p-4 md:p-6">
+          <div class="w-10 h-10 md:w-14 md:h-14 bg-[var(--accent)]/10 rounded-xl flex items-center justify-center mb-3 group-hover:bg-[var(--accent)] transition-colors">
+            <svg class="w-5 h-5 md:w-7 md:h-7 text-[var(--accent)] group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
             </svg>
           </div>
-          <h3 class="text-xl font-bold text-[var(--primary)] mb-3">Dla Kierowców</h3>
-          <p class="text-gray-600 mb-4 text-sm md:text-base">Szkolenia ADR uprawniające do przewozu towarów niebezpiecznych.</p>
-          <ul class="space-y-2 mb-6 text-sm">
+          <h3 class="text-base md:text-xl font-bold text-[var(--primary)] mb-2">Dla Kierowców</h3>
+          <p class="text-gray-600 mb-3 text-xs md:text-sm hidden md:block">Szkolenia ADR uprawniające do przewozu towarów niebezpiecznych.</p>
+          <ul class="hidden md:block space-y-2 mb-4 text-sm">
             <li class="flex items-center gap-2">
               <svg class="w-4 h-4 text-[var(--success)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
@@ -238,36 +235,25 @@ const penalties = [
               <svg class="w-4 h-4 text-[var(--success)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
               </svg>
-              <span>Kurs specjalistyczny — cysterny</span>
-            </li>
-            <li class="flex items-center gap-2">
-              <svg class="w-4 h-4 text-[var(--success)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-              </svg>
-              <span>Klasa 1 i 7 (materiały specjalne)</span>
-            </li>
-            <li class="flex items-center gap-2">
-              <svg class="w-4 h-4 text-[var(--success)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-              </svg>
-              <span>Szkolenia weekendowe</span>
+              <span>Cysterny, klasa 1 i 7</span>
             </li>
           </ul>
-          <a href="#szkolenia" class="btn-primary w-full text-center">
-            Zobacz terminy →
+          <p class="text-gray-500 text-xs mb-3 md:hidden">Kursy podstawowe i specjalistyczne</p>
+          <a href="#szkolenia" class="btn-primary w-full text-center text-xs md:text-base py-2 md:py-3">
+            Terminy →
           </a>
         </div>
         
-        <!-- For Companies -->
-        <div class="card group border-2 border-transparent hover:border-[var(--success)]">
-          <div class="w-14 h-14 bg-[var(--success)]/10 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-[var(--success)] transition-colors">
-            <svg class="w-7 h-7 text-[var(--success)] group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <!-- For Companies - Compact on mobile -->
+        <div class="card group border-2 border-transparent hover:border-[var(--success)] p-4 md:p-6">
+          <div class="w-10 h-10 md:w-14 md:h-14 bg-[var(--success)]/10 rounded-xl flex items-center justify-center mb-3 group-hover:bg-[var(--success)] transition-colors">
+            <svg class="w-5 h-5 md:w-7 md:h-7 text-[var(--success)] group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
             </svg>
           </div>
-          <h3 class="text-xl font-bold text-[var(--primary)] mb-3">Dla Firm</h3>
-          <p class="text-gray-600 mb-4 text-sm md:text-base">Kompleksowe doradztwo DGSA dla transportu i nadawców.</p>
-          <ul class="space-y-2 mb-6 text-sm">
+          <h3 class="text-base md:text-xl font-bold text-[var(--primary)] mb-2">Dla Firm</h3>
+          <p class="text-gray-600 mb-3 text-xs md:text-sm hidden md:block">Kompleksowe doradztwo DGSA dla transportu i nadawców.</p>
+          <ul class="hidden md:block space-y-2 mb-4 text-sm">
             <li class="flex items-center gap-2">
               <svg class="w-4 h-4 text-[var(--success)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
@@ -278,23 +264,12 @@ const penalties = [
               <svg class="w-4 h-4 text-[var(--success)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
               </svg>
-              <span>Roczne sprawozdania do ITD</span>
-            </li>
-            <li class="flex items-center gap-2">
-              <svg class="w-4 h-4 text-[var(--success)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-              </svg>
-              <span>Szkolenia pracowników</span>
-            </li>
-            <li class="flex items-center gap-2">
-              <svg class="w-4 h-4 text-[var(--success)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-              </svg>
-              <span>Procedury i audyty ADR</span>
+              <span>Sprawozdania, szkolenia</span>
             </li>
           </ul>
-          <a href="#doradztwo" class="btn-primary bg-[var(--success)] hover:bg-emerald-600 w-full text-center">
-            Dowiedz się więcej →
+          <p class="text-gray-500 text-xs mb-3 md:hidden">Doradztwo DGSA dla firm</p>
+          <a href="#doradztwo" class="btn-primary bg-[var(--success)] hover:bg-emerald-600 w-full text-center text-xs md:text-base py-2 md:py-3">
+            Więcej →
           </a>
         </div>
       </div>
