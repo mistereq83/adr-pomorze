@@ -2,25 +2,17 @@
 import Layout from '../layouts/Layout.astro';
 
 const courses = [
-  { date: "17-19.01.2026", type: "PODSTAWOWY", note: "WEEKEND", spots: 3 },
-  { date: "26-28.01.2026", type: "PODSTAWOWY", note: "", spots: 5 },
-  { date: "29-30.01.2026", type: "CYSTERNY", note: "specjalistyczny", spots: 4 },
-  { date: "31.01-02.02.2026", type: "PODSTAWOWY", note: "WEEKEND", spots: 6 },
-  { date: "02-04.02.2026", type: "PODSTAWOWY", note: "", spots: 8 },
-  { date: "09-11.02.2026", type: "PODSTAWOWY", note: "", spots: 10 },
-  { date: "12-13.02.2026", type: "CYSTERNY", note: "specjalistyczny", spots: 7 },
-  { date: "14-16.02.2026", type: "PODSTAWOWY", note: "WEEKEND", spots: 4 },
+  { id: "podstawowy-17-19-01", date: "17-19.01.2026", type: "PODSTAWOWY", note: "WEEKEND", spots: 3, price: 1200 },
+  { id: "podstawowy-26-28-01", date: "26-28.01.2026", type: "PODSTAWOWY", note: "", spots: 5, price: 1200 },
+  { id: "cysterny-29-30-01", date: "29-30.01.2026", type: "CYSTERNY", note: "specjalistyczny", spots: 4, price: 600 },
+  { id: "podstawowy-31-02-02", date: "31.01-02.02.2026", type: "PODSTAWOWY", note: "WEEKEND", spots: 6, price: 1200 },
+  { id: "podstawowy-02-04-02", date: "02-04.02.2026", type: "PODSTAWOWY", note: "", spots: 8, price: 1200 },
+  { id: "podstawowy-09-11-02", date: "09-11.02.2026", type: "PODSTAWOWY", note: "", spots: 10, price: 1200 },
+  { id: "cysterny-12-13-02", date: "12-13.02.2026", type: "CYSTERNY", note: "specjalistyczny", spots: 7, price: 600 },
+  { id: "podstawowy-14-16-02", date: "14-16.02.2026", type: "PODSTAWOWY", note: "WEEKEND", spots: 4, price: 1200 },
 ];
 
 const nextCourses = courses.slice(0, 3);
-
-const penalties = [
-  { offense: "Brak doradcy DGSA", amount: "5 000 zł" },
-  { offense: "Brak rocznego sprawozdania", amount: "5 000 zł" },
-  { offense: "Nieprzeszkoleni pracownicy", amount: "2 000 zł" },
-  { offense: "Brak numeru UN", amount: "1 000 zł" },
-  { offense: "Brak nalepki ostrzegawczej", amount: "500 zł" },
-];
 ---
 
 <Layout title="ADR Pomorze | Szkolenia ADR i Doradztwo DGSA - Gdańsk, Gdynia, Sopot">
@@ -130,7 +122,7 @@ const penalties = [
     </div>
   </section>
   
-  <!-- Full Calendar Section - NOW SECOND! -->
+  <!-- Full Calendar Section with Cart -->
   <section id="szkolenia" class="section-padding bg-gray-50">
     <div class="container-custom">
       <div class="text-center mb-8 md:mb-12">
@@ -138,45 +130,56 @@ const penalties = [
           📅 KALENDARZ SZKOLEŃ
         </span>
         <h2 class="text-2xl md:text-4xl font-black text-[var(--primary)] mb-2">
-          Wybierz termin i zapisz się
+          Wybierz terminy i zapisz się
         </h2>
         <p class="text-gray-600">
-          <strong class="text-[var(--accent)]">Nie odwołujemy kursów!</strong> Gwarancja terminu.
+          <strong class="text-[var(--accent)]">Możesz wybrać kilka szkoleń naraz!</strong> Np. ADR + cysterny.
         </p>
       </div>
       
-      <!-- Course cards - 2 columns on mobile -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4 mb-6">
+      <!-- Course cards with select buttons -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6" id="courses-grid">
         {courses.map((course) => (
-          <div class={`bg-white rounded-lg md:rounded-xl p-3 md:p-4 border-2 transition-all hover:shadow-lg cursor-pointer group ${course.type === 'CYSTERNY' ? 'border-[var(--accent)]' : 'border-gray-200 hover:border-[var(--success)]'}`}>
-            <div class="flex items-start justify-between mb-1 md:mb-2">
-              <div class="font-mono text-xs md:text-base font-bold text-[var(--primary)]">{course.date}</div>
+          <div 
+            class="course-card bg-white rounded-xl p-4 border-2 border-gray-200 transition-all hover:shadow-lg cursor-pointer group"
+            data-id={course.id}
+            data-date={course.date}
+            data-type={course.type}
+            data-price={course.price}
+            data-note={course.note}
+          >
+            <div class="flex items-start justify-between mb-2">
+              <div class="font-mono text-sm md:text-base font-bold text-[var(--primary)]">{course.date}</div>
               {course.note && (
-                <span class={`text-[10px] md:text-xs font-bold px-1 md:px-2 py-0.5 rounded ${course.note === 'WEEKEND' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
+                <span class={`text-[10px] md:text-xs font-bold px-2 py-0.5 rounded ${course.note === 'WEEKEND' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
                   {course.note === 'WEEKEND' ? 'WKD' : 'SPEC'}
                 </span>
               )}
             </div>
-            <div class={`font-semibold text-xs md:text-sm mb-1 ${course.type === 'CYSTERNY' ? 'text-[var(--accent)]' : 'text-gray-700'}`}>
+            
+            <div class={`font-semibold text-sm md:text-base mb-1 ${course.type === 'CYSTERNY' ? 'text-[var(--accent)]' : 'text-gray-700'}`}>
               {course.type}
             </div>
-            <div class="text-[10px] md:text-sm text-[var(--success)]">{course.spots} miejsc</div>
+            
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-sm text-[var(--success)] font-medium">{course.spots} miejsc</span>
+              <span class="text-sm font-bold text-[var(--primary)]">{course.price} zł</span>
+            </div>
+            
+            <button 
+              class="add-course-btn w-full py-2 px-4 rounded-lg font-semibold text-sm transition-all
+                     bg-gray-100 text-gray-700 hover:bg-[var(--accent)] hover:text-white
+                     selected:bg-[var(--success)] selected:text-white"
+            >
+              <span class="btn-text">+ Dodaj</span>
+            </button>
           </div>
         ))}
       </div>
       
-      <div class="text-center flex flex-col sm:flex-row gap-4 justify-center">
-        <a href="/rezerwacja" class="btn-primary text-lg px-8 py-4">
-          Zapisz się online →
-        </a>
-        <a href="tel:+48502611639" class="btn-secondary text-lg px-8 py-4">
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-          </svg>
-          502 611 639
-        </a>
-      </div>
-      <p class="text-gray-500 mt-4 text-sm text-center">Szkolenia także u Ciebie w firmie!</p>
+      <p class="text-gray-500 text-sm text-center">
+        💡 Szkolenia także u Ciebie w firmie! <a href="#kontakt" class="text-[var(--accent)] underline">Zapytaj o termin</a>
+      </p>
     </div>
   </section>
   
@@ -400,28 +403,338 @@ const penalties = [
     </div>
   </section>
   
-  <!-- Sticky Mobile CTA -->
-  <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 md:hidden z-50 safe-area-bottom">
-    <div class="flex gap-3">
-      <a href="tel:+48502611639" class="flex-1 btn-primary text-center py-3">
-        <svg class="w-5 h-5 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-        </svg>
-        Zadzwoń
-      </a>
-      <a href="#szkolenia" class="flex-1 btn-secondary text-center py-3">
-        Terminy
-      </a>
+  <!-- Cart Sticky Bar (hidden by default) -->
+  <div id="cart-bar" class="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-[var(--accent)] shadow-2xl z-50 transform translate-y-full transition-transform duration-300">
+    <div class="container-custom px-4 py-3">
+      <div class="flex items-center justify-between gap-4">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="text-lg">🛒</span>
+            <span class="font-bold text-[var(--primary)]" id="cart-count">0 szkoleń</span>
+            <span class="text-gray-400">•</span>
+            <span class="font-bold text-[var(--accent)]" id="cart-total">0 zł</span>
+          </div>
+          <div class="text-xs text-gray-500 truncate" id="cart-summary">Wybierz szkolenia powyżej</div>
+        </div>
+        <button 
+          id="cart-submit-btn"
+          class="btn-primary whitespace-nowrap px-6 py-3 flex items-center gap-2"
+        >
+          Zapisz się
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+          </svg>
+        </button>
+      </div>
     </div>
   </div>
   
-  <!-- Spacer for sticky CTA -->
-  <div class="h-20 md:hidden"></div>
+  <!-- Registration Modal -->
+  <div id="registration-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] hidden">
+    <div class="min-h-screen flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+          <h3 class="text-xl font-bold text-[var(--primary)]">Zapisz się na szkolenia</h3>
+          <button id="modal-close" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
+        <div class="p-6">
+          <!-- Selected courses summary -->
+          <div class="mb-6">
+            <h4 class="text-sm font-semibold text-gray-500 mb-3">WYBRANE SZKOLENIA</h4>
+            <div id="modal-courses" class="space-y-2">
+              <!-- Filled by JS -->
+            </div>
+            <div class="border-t mt-3 pt-3 flex justify-between font-bold">
+              <span>Razem:</span>
+              <span id="modal-total" class="text-[var(--accent)]">0 zł</span>
+            </div>
+          </div>
+          
+          <!-- Contact form -->
+          <form id="registration-form" class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Imię i nazwisko *</label>
+              <input 
+                type="text" 
+                name="name" 
+                required
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+                placeholder="Jan Kowalski"
+              />
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Telefon *</label>
+              <input 
+                type="tel" 
+                name="phone" 
+                required
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+                placeholder="502 611 639"
+              />
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input 
+                type="email" 
+                name="email"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+                placeholder="jan@firma.pl"
+              />
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Uwagi (opcjonalnie)</label>
+              <textarea 
+                name="notes"
+                rows="2"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+                placeholder="Np. potrzebuję faktury na firmę..."
+              ></textarea>
+            </div>
+            
+            <button 
+              type="submit"
+              class="w-full btn-primary py-4 text-lg"
+            >
+              Wyślij zgłoszenie
+            </button>
+            
+            <p class="text-xs text-gray-500 text-center">
+              Oddzwonimy w ciągu 24h, aby potwierdzić rezerwację.
+            </p>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Success Modal -->
+  <div id="success-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[70] hidden">
+    <div class="min-h-screen flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl p-8 text-center max-w-md">
+        <div class="w-16 h-16 bg-[var(--success)]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-8 h-8 text-[var(--success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <h3 class="text-2xl font-bold text-[var(--primary)] mb-2">Dziękujemy!</h3>
+        <p class="text-gray-600 mb-6">Twoje zgłoszenie zostało przyjęte. Oddzwonimy w ciągu 24 godzin, aby potwierdzić rezerwację.</p>
+        <button id="success-close" class="btn-primary">Zamknij</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Spacer for cart bar -->
+  <div id="cart-spacer" class="h-0 transition-all duration-300"></div>
   
 </Layout>
 
 <style>
+  .course-card.selected {
+    border-color: var(--success);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(16, 185, 129, 0.1) 100%);
+  }
+  
+  .course-card.selected .add-course-btn {
+    background: var(--success);
+    color: white;
+  }
+  
+  #cart-bar.visible {
+    transform: translateY(0);
+  }
+  
   .safe-area-bottom {
     padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
   }
 </style>
+
+<script>
+  // Course Cart Logic
+  const cart = new Map();
+  
+  const cartBar = document.getElementById('cart-bar');
+  const cartCount = document.getElementById('cart-count');
+  const cartTotal = document.getElementById('cart-total');
+  const cartSummary = document.getElementById('cart-summary');
+  const cartSpacer = document.getElementById('cart-spacer');
+  const cartSubmitBtn = document.getElementById('cart-submit-btn');
+  
+  const modal = document.getElementById('registration-modal');
+  const modalClose = document.getElementById('modal-close');
+  const modalCourses = document.getElementById('modal-courses');
+  const modalTotal = document.getElementById('modal-total');
+  const form = document.getElementById('registration-form');
+  
+  const successModal = document.getElementById('success-modal');
+  const successClose = document.getElementById('success-close');
+  
+  // Add click handlers to course cards
+  document.querySelectorAll('.course-card').forEach(card => {
+    const btn = card.querySelector('.add-course-btn');
+    const btnText = btn.querySelector('.btn-text');
+    
+    const toggle = () => {
+      const id = card.dataset.id;
+      const isSelected = cart.has(id);
+      
+      if (isSelected) {
+        cart.delete(id);
+        card.classList.remove('selected');
+        btnText.textContent = '+ Dodaj';
+      } else {
+        cart.set(id, {
+          id,
+          date: card.dataset.date,
+          type: card.dataset.type,
+          price: parseInt(card.dataset.price),
+          note: card.dataset.note
+        });
+        card.classList.add('selected');
+        btnText.textContent = '✓ Wybrano';
+      }
+      
+      updateCartUI();
+    };
+    
+    card.addEventListener('click', toggle);
+  });
+  
+  function updateCartUI() {
+    const count = cart.size;
+    const total = Array.from(cart.values()).reduce((sum, c) => sum + c.price, 0);
+    const items = Array.from(cart.values());
+    
+    cartCount.textContent = `${count} ${count === 1 ? 'szkolenie' : count < 5 ? 'szkolenia' : 'szkoleń'}`;
+    cartTotal.textContent = `${total} zł`;
+    
+    if (items.length > 0) {
+      const names = items.map(c => `${c.type} (${c.date})`).join(', ');
+      cartSummary.textContent = names;
+    } else {
+      cartSummary.textContent = 'Wybierz szkolenia powyżej';
+    }
+    
+    // Show/hide cart bar
+    if (count > 0) {
+      cartBar.classList.add('visible');
+      cartSpacer.style.height = '80px';
+    } else {
+      cartBar.classList.remove('visible');
+      cartSpacer.style.height = '0';
+    }
+  }
+  
+  // Open registration modal
+  cartSubmitBtn.addEventListener('click', () => {
+    if (cart.size === 0) {
+      alert('Wybierz co najmniej jedno szkolenie');
+      return;
+    }
+    
+    // Populate modal with selected courses
+    const items = Array.from(cart.values());
+    const total = items.reduce((sum, c) => sum + c.price, 0);
+    
+    modalCourses.innerHTML = items.map(c => `
+      <div class="flex justify-between items-center bg-gray-50 rounded-lg p-3">
+        <div>
+          <div class="font-medium">${c.type}</div>
+          <div class="text-sm text-gray-500">${c.date}${c.note ? ` • ${c.note}` : ''}</div>
+        </div>
+        <div class="font-bold">${c.price} zł</div>
+      </div>
+    `).join('');
+    
+    modalTotal.textContent = `${total} zł`;
+    
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  });
+  
+  // Close modal
+  modalClose.addEventListener('click', () => {
+    modal.classList.add('hidden');
+    document.body.style.overflow = '';
+  });
+  
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+  });
+  
+  // Form submission
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Wysyłanie...';
+    submitBtn.disabled = true;
+    
+    const formData = new FormData(form);
+    const data = {
+      name: formData.get('name'),
+      phone: formData.get('phone'),
+      email: formData.get('email'),
+      notes: formData.get('notes'),
+      courses: Array.from(cart.values())
+    };
+    
+    try {
+      const response = await fetch('/api/reservations/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Błąd wysyłania');
+      }
+      
+      // Show success
+      modal.classList.add('hidden');
+      successModal.classList.remove('hidden');
+      
+      // Clear cart
+      cart.clear();
+      document.querySelectorAll('.course-card.selected').forEach(card => {
+        card.classList.remove('selected');
+        card.querySelector('.btn-text').textContent = '+ Dodaj';
+      });
+      updateCartUI();
+      
+      form.reset();
+      
+    } catch (error) {
+      alert('Błąd: ' + error.message + '\n\nSpróbuj ponownie lub zadzwoń: 502 611 639');
+    } finally {
+      submitBtn.textContent = originalText;
+      submitBtn.disabled = false;
+    }
+  });
+  
+  // Close success modal
+  successClose.addEventListener('click', () => {
+    successModal.classList.add('hidden');
+    document.body.style.overflow = '';
+  });
+  
+  successModal.addEventListener('click', (e) => {
+    if (e.target === successModal) {
+      successModal.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+  });
+</script>
