@@ -1,0 +1,141 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { db } from '../../../db';
+import { participants, reservations, courses } from '../../../db/schema';
+import { eq, like, or, desc, count } from 'drizzle-orm';
+
+const search = Astro.url.searchParams.get('search') || '';
+
+// Pobierz uczestników
+let allParticipants;
+if (search) {
+  const searchPattern = `%${search}%`;
+  allParticipants = await db.select().from(participants)
+    .where(
+      or(
+        like(participants.lastName, searchPattern),
+        like(participants.firstName, searchPattern),
+        like(participants.phone, searchPattern),
+        like(participants.pesel, searchPattern),
+        like(participants.email, searchPattern)
+      )
+    )
+    .orderBy(desc(participants.createdAt))
+    .limit(100);
+} else {
+  allParticipants = await db.select().from(participants)
+    .orderBy(desc(participants.createdAt))
+    .limit(100);
+}
+
+// Policz rezerwacje każdego uczestnika
+const participantsWithCounts = await Promise.all(
+  allParticipants.map(async (p) => {
+    const resCount = await db
+      .select({ count: count() })
+      .from(reservations)
+      .where(eq(reservations.participantId, p.id));
+    return {
+      ...p,
+      reservationCount: resCount[0].count,
+    };
+  })
+);
+
+function formatDate(dateStr: string | null) {
+  if (!dateStr) return '-';
+  return new Date(dateStr).toLocaleDateString('pl-PL');
+}
+---
+
+<AdminLayout title="Baza uczestników">
+  <!-- Search -->
+  <form method="GET" class="mb-6">
+    <div class="flex gap-2">
+      <input 
+        type="text" 
+        name="search" 
+        value={search}
+        placeholder="Szukaj: nazwisko, telefon, PESEL, email..."
+        class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+      />
+      <button type="submit" class="btn-primary">
+        Szukaj
+      </button>
+      {search && (
+        <a href="/admin/participants" class="btn-secondary">
+          Wyczyść
+        </a>
+      )}
+    </div>
+  </form>
+  
+  <p class="text-gray-600 mb-4">
+    {search ? `Znaleziono: ${allParticipants.length} uczestników` : `Łącznie: ${allParticipants.length} uczestników`}
+  </p>
+  
+  <div class="bg-white rounded-xl shadow-sm overflow-x-auto">
+    <table class="w-full min-w-[800px]">
+      <thead class="bg-gray-50 border-b">
+        <tr>
+          <th class="text-left p-4 font-medium text-gray-700">Nazwisko i imię</th>
+          <th class="text-left p-4 font-medium text-gray-700">Telefon</th>
+          <th class="text-left p-4 font-medium text-gray-700">Email</th>
+          <th class="text-left p-4 font-medium text-gray-700">PESEL</th>
+          <th class="text-left p-4 font-medium text-gray-700">ADR</th>
+          <th class="text-left p-4 font-medium text-gray-700">Szkoleń</th>
+          <th class="text-left p-4 font-medium text-gray-700">Akcje</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y">
+        {participantsWithCounts.length === 0 ? (
+          <tr>
+            <td colspan="7" class="p-8 text-center text-gray-500">
+              {search ? 'Nie znaleziono uczestników' : 'Brak uczestników w bazie'}
+            </td>
+          </tr>
+        ) : (
+          participantsWithCounts.map((p) => (
+            <tr class="hover:bg-gray-50">
+              <td class="p-4">
+                <div class="font-medium">{p.lastName} {p.firstName}</div>
+                {p.city && <div class="text-sm text-gray-500">{p.city}</div>}
+              </td>
+              <td class="p-4 font-mono text-sm">{p.phone}</td>
+              <td class="p-4 text-sm">{p.email || '-'}</td>
+              <td class="p-4 font-mono text-sm">{p.pesel || '-'}</td>
+              <td class="p-4">
+                {p.hasCurrentAdr ? (
+                  <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">TAK</span>
+                ) : (
+                  <span class="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">NIE</span>
+                )}
+              </td>
+              <td class="p-4">
+                <span class={p.reservationCount > 0 ? 'font-bold text-[var(--accent)]' : 'text-gray-500'}>
+                  {p.reservationCount}
+                </span>
+              </td>
+              <td class="p-4">
+                <div class="flex items-center gap-2">
+                  <a 
+                    href={`/admin/participants/${p.id}`} 
+                    class="text-[var(--accent)] hover:underline text-sm"
+                  >
+                    Edytuj
+                  </a>
+                  <a 
+                    href={`/admin/reservations/new?participantId=${p.id}`} 
+                    class="text-blue-600 hover:underline text-sm"
+                  >
+                    + Rezerwacja
+                  </a>
+                </div>
+              </td>
+            </tr>
+          ))
+        )}
+      </tbody>
+    </table>
+  </div>
+</AdminLayout>

@@ -1,0 +1,278 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { db } from '../../../db';
+import { courses, participants, reservations } from '../../../db/schema';
+import { eq } from 'drizzle-orm';
+
+let error = '';
+
+if (Astro.request.method === 'POST') {
+  try {
+    const formData = await Astro.request.formData();
+    
+    // Sprawdź czy wybrać istniejącego uczestnika czy stworzyć nowego
+    let participantId = formData.get('participantId') as string;
+    
+    if (!participantId || participantId === 'new') {
+      // Stwórz nowego uczestnika
+      const newParticipant = await db.insert(participants).values({
+        firstName: formData.get('firstName') as string,
+        lastName: formData.get('lastName') as string,
+        phone: formData.get('phone') as string,
+        email: formData.get('email') as string || null,
+        pesel: formData.get('pesel') as string || null,
+        hasCurrentAdr: formData.get('hasCurrentAdr') === 'on',
+        currentAdrNumber: formData.get('currentAdrNumber') as string || null,
+        createdAt: new Date().toISOString(),
+      }).returning();
+      
+      participantId = newParticipant[0].id.toString();
+    }
+    
+    // Stwórz rezerwację
+    await db.insert(reservations).values({
+      courseId: parseInt(formData.get('courseId') as string),
+      participantId: parseInt(participantId),
+      status: formData.get('status') as string || 'confirmed',
+      paymentMethod: formData.get('paymentMethod') as string || null,
+      paymentStatus: formData.get('paymentStatus') as string || 'unpaid',
+      needsInvoice: formData.get('needsInvoice') === 'on',
+      invoiceCompany: formData.get('invoiceCompany') as string || null,
+      invoiceNip: formData.get('invoiceNip') as string || null,
+      source: 'manual',
+      notes: formData.get('notes') as string || null,
+      createdAt: new Date().toISOString(),
+    });
+    
+    return Astro.redirect('/admin/reservations');
+  } catch (e) {
+    console.error(e);
+    error = 'Błąd podczas dodawania rezerwacji';
+  }
+}
+
+// Pobierz dostępne kursy
+const openCourses = await db.select().from(courses).where(eq(courses.status, 'open')).orderBy(courses.startDate);
+
+// Pobierz uczestników do wyszukiwania
+const allParticipants = await db.select().from(participants).orderBy(participants.lastName).limit(100);
+---
+
+<AdminLayout title="Dodaj rezerwację">
+  <div class="max-w-3xl">
+    {error && (
+      <div class="bg-red-50 text-red-700 p-4 rounded-lg mb-4">
+        {error}
+      </div>
+    )}
+    
+    <form method="POST" class="bg-white rounded-xl shadow-sm p-6 space-y-6">
+      <!-- Wybór kursu -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Kurs *
+        </label>
+        <select 
+          name="courseId" 
+          required
+          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+        >
+          <option value="">-- Wybierz kurs --</option>
+          {openCourses.map(c => (
+            <option value={c.id}>
+              {c.startDate} - {c.endDate} | {c.courseType} | {c.location}
+            </option>
+          ))}
+        </select>
+      </div>
+      
+      <!-- Wybór uczestnika -->
+      <div class="border-t pt-6">
+        <h3 class="font-bold text-lg mb-4">Uczestnik</h3>
+        
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Wybierz istniejącego lub dodaj nowego
+          </label>
+          <select 
+            name="participantId" 
+            id="participantSelect"
+            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+            onchange="toggleNewParticipant(this.value)"
+          >
+            <option value="new">➕ Dodaj nowego uczestnika</option>
+            {allParticipants.map(p => (
+              <option value={p.id}>
+                {p.lastName} {p.firstName} | {p.phone}
+              </option>
+            ))}
+          </select>
+        </div>
+        
+        <!-- Formularz nowego uczestnika -->
+        <div id="newParticipantForm" class="space-y-4 bg-gray-50 p-4 rounded-lg">
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Imię *</label>
+              <input 
+                type="text" 
+                name="firstName" 
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Nazwisko *</label>
+              <input 
+                type="text" 
+                name="lastName" 
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+              />
+            </div>
+          </div>
+          
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Telefon *</label>
+              <input 
+                type="tel" 
+                name="phone" 
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input 
+                type="email" 
+                name="email" 
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+              />
+            </div>
+          </div>
+          
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">PESEL</label>
+              <input 
+                type="text" 
+                name="pesel" 
+                maxlength="11"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+              />
+            </div>
+            <div class="flex items-center gap-2 pt-6">
+              <input type="checkbox" name="hasCurrentAdr" id="hasCurrentAdr" class="w-4 h-4" />
+              <label for="hasCurrentAdr" class="text-sm text-gray-700">Ma aktualne zaświadczenie ADR</label>
+            </div>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Nr aktualnego zaświadczenia ADR</label>
+            <input 
+              type="text" 
+              name="currentAdrNumber" 
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+            />
+          </div>
+        </div>
+      </div>
+      
+      <!-- Status i płatność -->
+      <div class="border-t pt-6">
+        <h3 class="font-bold text-lg mb-4">Status rezerwacji</h3>
+        
+        <div class="grid md:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+              <option value="confirmed">Potwierdzona</option>
+              <option value="pending">Oczekująca</option>
+              <option value="paid">Opłacona</option>
+            </select>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Metoda płatności</label>
+            <select name="paymentMethod" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+              <option value="">-- nie wybrano --</option>
+              <option value="przelew">Przelew</option>
+              <option value="gotowka">Gotówka</option>
+              <option value="faktura">Faktura</option>
+            </select>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Status płatności</label>
+            <select name="paymentStatus" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+              <option value="unpaid">Nieopłacone</option>
+              <option value="partial">Częściowo opłacone</option>
+              <option value="paid">Opłacone</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Faktura -->
+      <div class="border-t pt-6">
+        <div class="flex items-center gap-2 mb-4">
+          <input type="checkbox" name="needsInvoice" id="needsInvoice" class="w-4 h-4" />
+          <label for="needsInvoice" class="font-medium">Potrzebuje fakturę</label>
+        </div>
+        
+        <div class="grid md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Nazwa firmy</label>
+            <input type="text" name="invoiceCompany" class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">NIP</label>
+            <input type="text" name="invoiceNip" class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+          </div>
+        </div>
+      </div>
+      
+      <!-- Notatki -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Notatki
+        </label>
+        <textarea 
+          name="notes" 
+          rows="3"
+          placeholder="Dodatkowe informacje..."
+          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+        ></textarea>
+      </div>
+      
+      <div class="flex items-center gap-4">
+        <button type="submit" class="btn-primary">
+          Dodaj rezerwację
+        </button>
+        <a href="/admin/reservations" class="text-gray-500 hover:text-gray-700">
+          Anuluj
+        </a>
+      </div>
+    </form>
+  </div>
+</AdminLayout>
+
+<script is:inline>
+function toggleNewParticipant(value) {
+  const form = document.getElementById('newParticipantForm');
+  if (value === 'new') {
+    form.style.display = 'block';
+    form.querySelectorAll('input[name="firstName"], input[name="lastName"], input[name="phone"]').forEach(el => {
+      el.required = true;
+    });
+  } else {
+    form.style.display = 'none';
+    form.querySelectorAll('input').forEach(el => {
+      el.required = false;
+    });
+  }
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+  toggleNewParticipant(document.getElementById('participantSelect').value);
+});
+</script>

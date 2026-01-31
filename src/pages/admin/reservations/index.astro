@@ -1,0 +1,189 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { db } from '../../../db';
+import { reservations, participants, courses } from '../../../db/schema';
+import { eq, desc } from 'drizzle-orm';
+
+const courseIdParam = Astro.url.searchParams.get('courseId');
+const statusParam = Astro.url.searchParams.get('status');
+
+// Pobierz rezerwacje z joinami
+let allReservations = await db
+  .select({
+    reservation: reservations,
+    participant: participants,
+    course: courses,
+  })
+  .from(reservations)
+  .leftJoin(participants, eq(reservations.participantId, participants.id))
+  .leftJoin(courses, eq(reservations.courseId, courses.id))
+  .orderBy(desc(reservations.createdAt));
+
+// Filtruj
+if (courseIdParam) {
+  allReservations = allReservations.filter(r => r.reservation.courseId === parseInt(courseIdParam));
+}
+if (statusParam) {
+  allReservations = allReservations.filter(r => r.reservation.status === statusParam);
+}
+
+function getStatusBadge(status: string | null) {
+  const badges: Record<string, { class: string; label: string }> = {
+    pending: { class: 'bg-yellow-100 text-yellow-800', label: 'Oczekuje' },
+    confirmed: { class: 'bg-blue-100 text-blue-800', label: 'Potwierdzona' },
+    paid: { class: 'bg-green-100 text-green-800', label: 'Opłacona' },
+    completed: { class: 'bg-gray-100 text-gray-800', label: 'Zakończona' },
+    cancelled: { class: 'bg-red-100 text-red-800', label: 'Anulowana' },
+    no_show: { class: 'bg-red-100 text-red-800', label: 'Nieobecność' },
+  };
+  return badges[status || 'pending'] || badges.pending;
+}
+
+function getPaymentBadge(status: string | null) {
+  const badges: Record<string, { class: string; label: string }> = {
+    unpaid: { class: 'bg-red-100 text-red-800', label: 'Nieopłacone' },
+    partial: { class: 'bg-yellow-100 text-yellow-800', label: 'Częściowo' },
+    paid: { class: 'bg-green-100 text-green-800', label: 'Opłacone' },
+  };
+  return badges[status || 'unpaid'] || badges.unpaid;
+}
+
+function formatDate(dateStr: string | null) {
+  if (!dateStr) return '-';
+  return new Date(dateStr).toLocaleDateString('pl-PL');
+}
+---
+
+<AdminLayout title="Zarządzanie rezerwacjami">
+  <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+    <div class="flex flex-wrap gap-2">
+      <a 
+        href="/admin/reservations" 
+        class={`px-3 py-1 rounded text-sm ${!statusParam ? 'bg-[var(--primary)] text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+      >
+        Wszystkie
+      </a>
+      <a 
+        href="/admin/reservations?status=pending" 
+        class={`px-3 py-1 rounded text-sm ${statusParam === 'pending' ? 'bg-yellow-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+      >
+        Oczekujące
+      </a>
+      <a 
+        href="/admin/reservations?status=confirmed" 
+        class={`px-3 py-1 rounded text-sm ${statusParam === 'confirmed' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+      >
+        Potwierdzone
+      </a>
+      <a 
+        href="/admin/reservations?status=paid" 
+        class={`px-3 py-1 rounded text-sm ${statusParam === 'paid' ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+      >
+        Opłacone
+      </a>
+    </div>
+    <a href="/admin/reservations/new" class="btn-primary">
+      + Dodaj rezerwację
+    </a>
+  </div>
+  
+  <div class="bg-white rounded-xl shadow-sm overflow-x-auto">
+    <table class="w-full min-w-[800px]">
+      <thead class="bg-gray-50 border-b">
+        <tr>
+          <th class="text-left p-4 font-medium text-gray-700">Uczestnik</th>
+          <th class="text-left p-4 font-medium text-gray-700">Kurs</th>
+          <th class="text-left p-4 font-medium text-gray-700">Status</th>
+          <th class="text-left p-4 font-medium text-gray-700">Płatność</th>
+          <th class="text-left p-4 font-medium text-gray-700">Źródło</th>
+          <th class="text-left p-4 font-medium text-gray-700">Data zgł.</th>
+          <th class="text-left p-4 font-medium text-gray-700">Akcje</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y">
+        {allReservations.length === 0 ? (
+          <tr>
+            <td colspan="7" class="p-8 text-center text-gray-500">
+              Brak rezerwacji
+            </td>
+          </tr>
+        ) : (
+          allReservations.map((r) => (
+            <tr class="hover:bg-gray-50">
+              <td class="p-4">
+                <div class="font-medium">{r.participant?.firstName} {r.participant?.lastName}</div>
+                <div class="text-sm text-gray-500">{r.participant?.phone}</div>
+              </td>
+              <td class="p-4">
+                <div class="font-mono text-sm">{r.course?.startDate}</div>
+                <div class="text-sm text-gray-500">{r.course?.courseType}</div>
+              </td>
+              <td class="p-4">
+                <select 
+                  class={`px-2 py-1 rounded text-xs font-medium border-0 ${getStatusBadge(r.reservation.status).class}`}
+                  data-reservation-id={r.reservation.id}
+                  data-field="status"
+                  onchange="updateReservation(this)"
+                >
+                  <option value="pending" selected={r.reservation.status === 'pending'}>Oczekuje</option>
+                  <option value="confirmed" selected={r.reservation.status === 'confirmed'}>Potwierdzona</option>
+                  <option value="paid" selected={r.reservation.status === 'paid'}>Opłacona</option>
+                  <option value="completed" selected={r.reservation.status === 'completed'}>Zakończona</option>
+                  <option value="cancelled" selected={r.reservation.status === 'cancelled'}>Anulowana</option>
+                  <option value="no_show" selected={r.reservation.status === 'no_show'}>Nieobecność</option>
+                </select>
+              </td>
+              <td class="p-4">
+                <select 
+                  class={`px-2 py-1 rounded text-xs font-medium border-0 ${getPaymentBadge(r.reservation.paymentStatus).class}`}
+                  data-reservation-id={r.reservation.id}
+                  data-field="paymentStatus"
+                  onchange="updateReservation(this)"
+                >
+                  <option value="unpaid" selected={r.reservation.paymentStatus === 'unpaid'}>Nieopłacone</option>
+                  <option value="partial" selected={r.reservation.paymentStatus === 'partial'}>Częściowo</option>
+                  <option value="paid" selected={r.reservation.paymentStatus === 'paid'}>Opłacone</option>
+                </select>
+              </td>
+              <td class="p-4 text-sm text-gray-500">{r.reservation.source}</td>
+              <td class="p-4 text-sm text-gray-500">{formatDate(r.reservation.createdAt)}</td>
+              <td class="p-4">
+                <a 
+                  href={`/admin/reservations/${r.reservation.id}`} 
+                  class="text-[var(--accent)] hover:underline text-sm"
+                >
+                  Szczegóły
+                </a>
+              </td>
+            </tr>
+          ))
+        )}
+      </tbody>
+    </table>
+  </div>
+</AdminLayout>
+
+<script is:inline>
+async function updateReservation(select) {
+  const id = select.dataset.reservationId;
+  const field = select.dataset.field;
+  const value = select.value;
+  
+  try {
+    const res = await fetch(`/api/reservations/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [field]: value }),
+    });
+    
+    if (res.ok) {
+      // Refresh badge colors
+      location.reload();
+    } else {
+      alert('Błąd aktualizacji');
+    }
+  } catch (e) {
+    alert('Błąd połączenia');
+  }
+}
+</script>

@@ -1,0 +1,117 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { db } from '../../../db';
+import { courses, reservations } from '../../../db/schema';
+import { eq, count, desc } from 'drizzle-orm';
+
+// Pobierz kursy z liczbą rezerwacji
+const allCourses = await db.select().from(courses).orderBy(desc(courses.startDate));
+
+// Policz rezerwacje dla każdego kursu
+const coursesWithCounts = await Promise.all(
+  allCourses.map(async (course) => {
+    const reservationCount = await db
+      .select({ count: count() })
+      .from(reservations)
+      .where(eq(reservations.courseId, course.id));
+    return {
+      ...course,
+      reservationCount: reservationCount[0].count,
+    };
+  })
+);
+
+function getStatusBadge(status: string | null) {
+  const badges: Record<string, { class: string; label: string }> = {
+    open: { class: 'bg-green-100 text-green-800', label: 'Otwarty' },
+    full: { class: 'bg-yellow-100 text-yellow-800', label: 'Pełny' },
+    completed: { class: 'bg-gray-100 text-gray-800', label: 'Zakończony' },
+    cancelled: { class: 'bg-red-100 text-red-800', label: 'Anulowany' },
+  };
+  return badges[status || 'open'] || badges.open;
+}
+
+function getCourseTypeBadge(type: string) {
+  if (type.toLowerCase().includes('cystern')) {
+    return 'bg-orange-100 text-orange-800';
+  }
+  if (type.toLowerCase().includes('klasa')) {
+    return 'bg-purple-100 text-purple-800';
+  }
+  return 'bg-blue-100 text-blue-800';
+}
+---
+
+<AdminLayout title="Zarządzanie kursami">
+  <div class="flex items-center justify-between mb-6">
+    <p class="text-gray-600">Łącznie: {allCourses.length} kursów</p>
+    <a href="/admin/courses/new" class="btn-primary">
+      + Dodaj nowy kurs
+    </a>
+  </div>
+  
+  <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <table class="w-full">
+      <thead class="bg-gray-50 border-b">
+        <tr>
+          <th class="text-left p-4 font-medium text-gray-700">Data</th>
+          <th class="text-left p-4 font-medium text-gray-700">Typ kursu</th>
+          <th class="text-left p-4 font-medium text-gray-700">Miejsce</th>
+          <th class="text-left p-4 font-medium text-gray-700">Zapisanych</th>
+          <th class="text-left p-4 font-medium text-gray-700">Status</th>
+          <th class="text-left p-4 font-medium text-gray-700">Akcje</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y">
+        {coursesWithCounts.length === 0 ? (
+          <tr>
+            <td colspan="6" class="p-8 text-center text-gray-500">
+              Brak kursów. <a href="/admin/courses/new" class="text-[var(--accent)] hover:underline">Dodaj pierwszy kurs</a>
+            </td>
+          </tr>
+        ) : (
+          coursesWithCounts.map((course) => (
+            <tr class="hover:bg-gray-50">
+              <td class="p-4">
+                <div class="font-mono font-medium">{course.startDate}</div>
+                <div class="text-sm text-gray-500">do {course.endDate}</div>
+              </td>
+              <td class="p-4">
+                <span class={`px-2 py-1 rounded text-sm font-medium ${getCourseTypeBadge(course.courseType || '')}`}>
+                  {course.courseType}
+                </span>
+              </td>
+              <td class="p-4 text-gray-600">{course.location}</td>
+              <td class="p-4">
+                <span class={course.reservationCount >= (course.maxParticipants || 15) ? 'text-red-600 font-bold' : ''}>
+                  {course.reservationCount} / {course.maxParticipants}
+                </span>
+              </td>
+              <td class="p-4">
+                <span class={`px-2 py-1 rounded text-xs font-medium ${getStatusBadge(course.status).class}`}>
+                  {getStatusBadge(course.status).label}
+                </span>
+              </td>
+              <td class="p-4">
+                <div class="flex items-center gap-2">
+                  <a 
+                    href={`/admin/courses/${course.id}`} 
+                    class="text-[var(--accent)] hover:underline text-sm"
+                  >
+                    Edytuj
+                  </a>
+                  <a 
+                    href={`/admin/reservations?courseId=${course.id}`} 
+                    class="text-blue-600 hover:underline text-sm"
+                  >
+                    Rezerwacje
+                  </a>
+                </div>
+              </td>
+            </tr>
+          ))
+        )}
+      </tbody>
+    </table>
+  </div>
+</AdminLayout>

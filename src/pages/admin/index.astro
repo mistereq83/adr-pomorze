@@ -1,0 +1,171 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { db } from '../../db';
+import { courses, reservations, participants } from '../../db/schema';
+import { eq, count, desc, gte } from 'drizzle-orm';
+
+// Statystyki
+const totalCourses = await db.select({ count: count() }).from(courses);
+const openCourses = await db.select({ count: count() }).from(courses).where(eq(courses.status, 'open'));
+const totalReservations = await db.select({ count: count() }).from(reservations);
+const pendingReservations = await db.select({ count: count() }).from(reservations).where(eq(reservations.status, 'pending'));
+const totalParticipants = await db.select({ count: count() }).from(participants);
+
+// Ostatnie rezerwacje
+const recentReservations = await db
+  .select({
+    reservation: reservations,
+    participant: participants,
+    course: courses,
+  })
+  .from(reservations)
+  .leftJoin(participants, eq(reservations.participantId, participants.id))
+  .leftJoin(courses, eq(reservations.courseId, courses.id))
+  .orderBy(desc(reservations.createdAt))
+  .limit(5);
+
+// Najbliższe kursy
+const upcomingCourses = await db
+  .select()
+  .from(courses)
+  .where(eq(courses.status, 'open'))
+  .orderBy(courses.startDate)
+  .limit(5);
+
+const stats = {
+  courses: totalCourses[0].count,
+  openCourses: openCourses[0].count,
+  reservations: totalReservations[0].count,
+  pendingReservations: pendingReservations[0].count,
+  participants: totalParticipants[0].count,
+};
+
+function formatDate(dateStr: string | null) {
+  if (!dateStr) return '-';
+  return new Date(dateStr).toLocaleDateString('pl-PL');
+}
+
+function getStatusBadge(status: string | null) {
+  const badges: Record<string, string> = {
+    pending: 'bg-yellow-100 text-yellow-800',
+    confirmed: 'bg-blue-100 text-blue-800',
+    paid: 'bg-green-100 text-green-800',
+    completed: 'bg-gray-100 text-gray-800',
+    cancelled: 'bg-red-100 text-red-800',
+  };
+  return badges[status || 'pending'] || 'bg-gray-100 text-gray-800';
+}
+
+function getPaymentBadge(status: string | null) {
+  const badges: Record<string, string> = {
+    unpaid: 'bg-red-100 text-red-800',
+    partial: 'bg-yellow-100 text-yellow-800',
+    paid: 'bg-green-100 text-green-800',
+  };
+  return badges[status || 'unpaid'] || 'bg-gray-100 text-gray-800';
+}
+---
+
+<AdminLayout title="Dashboard">
+  <!-- Stats -->
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+    <div class="bg-white rounded-xl p-4 shadow-sm">
+      <div class="text-3xl font-bold text-[var(--primary)]">{stats.courses}</div>
+      <div class="text-gray-500 text-sm">Wszystkich kursów</div>
+    </div>
+    <div class="bg-white rounded-xl p-4 shadow-sm">
+      <div class="text-3xl font-bold text-[var(--success)]">{stats.openCourses}</div>
+      <div class="text-gray-500 text-sm">Otwartych kursów</div>
+    </div>
+    <div class="bg-white rounded-xl p-4 shadow-sm">
+      <div class="text-3xl font-bold text-[var(--accent)]">{stats.reservations}</div>
+      <div class="text-gray-500 text-sm">Rezerwacji</div>
+    </div>
+    <div class="bg-white rounded-xl p-4 shadow-sm">
+      <div class="text-3xl font-bold text-yellow-500">{stats.pendingReservations}</div>
+      <div class="text-gray-500 text-sm">Oczekujących</div>
+    </div>
+    <div class="bg-white rounded-xl p-4 shadow-sm">
+      <div class="text-3xl font-bold text-blue-500">{stats.participants}</div>
+      <div class="text-gray-500 text-sm">Uczestników</div>
+    </div>
+  </div>
+  
+  <div class="grid lg:grid-cols-2 gap-6">
+    <!-- Ostatnie rezerwacje -->
+    <div class="bg-white rounded-xl shadow-sm">
+      <div class="p-4 border-b flex items-center justify-between">
+        <h2 class="font-bold text-lg">Ostatnie zgłoszenia</h2>
+        <a href="/admin/reservations" class="text-[var(--accent)] text-sm hover:underline">Zobacz wszystkie →</a>
+      </div>
+      <div class="divide-y">
+        {recentReservations.length === 0 ? (
+          <div class="p-4 text-gray-500 text-center">Brak rezerwacji</div>
+        ) : (
+          recentReservations.map((r) => (
+            <div class="p-4 hover:bg-gray-50">
+              <div class="flex items-center justify-between mb-1">
+                <span class="font-medium">
+                  {r.participant?.firstName} {r.participant?.lastName}
+                </span>
+                <span class={`text-xs px-2 py-1 rounded ${getStatusBadge(r.reservation.status)}`}>
+                  {r.reservation.status}
+                </span>
+              </div>
+              <div class="text-sm text-gray-500">
+                {r.course?.courseType} • {formatDate(r.course?.startDate || null)}
+              </div>
+              <div class="flex items-center gap-2 mt-1">
+                <span class={`text-xs px-2 py-0.5 rounded ${getPaymentBadge(r.reservation.paymentStatus)}`}>
+                  {r.reservation.paymentStatus === 'paid' ? 'Opłacone' : r.reservation.paymentStatus === 'partial' ? 'Częściowo' : 'Nieopłacone'}
+                </span>
+                <span class="text-xs text-gray-400">{r.reservation.source}</span>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+    
+    <!-- Najbliższe kursy -->
+    <div class="bg-white rounded-xl shadow-sm">
+      <div class="p-4 border-b flex items-center justify-between">
+        <h2 class="font-bold text-lg">Najbliższe kursy</h2>
+        <a href="/admin/courses" class="text-[var(--accent)] text-sm hover:underline">Zarządzaj →</a>
+      </div>
+      <div class="divide-y">
+        {upcomingCourses.length === 0 ? (
+          <div class="p-4 text-gray-500 text-center">Brak otwartych kursów</div>
+        ) : (
+          upcomingCourses.map((c) => (
+            <div class="p-4 hover:bg-gray-50">
+              <div class="flex items-center justify-between mb-1">
+                <span class="font-mono font-medium">{c.startDate} - {c.endDate}</span>
+                <span class={`text-xs px-2 py-1 rounded ${c.courseType === 'cysterny' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`}>
+                  {c.courseType}
+                </span>
+              </div>
+              <div class="text-sm text-gray-500">
+                {c.location} • max {c.maxParticipants} osób
+                {c.price && <span> • {c.price} zł</span>}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  </div>
+  
+  <!-- Quick actions -->
+  <div class="mt-8 flex flex-wrap gap-4">
+    <a href="/admin/courses/new" class="btn-primary">
+      + Dodaj kurs
+    </a>
+    <a href="/admin/reservations/new" class="btn-primary bg-[var(--success)] hover:bg-emerald-600">
+      + Dodaj rezerwację
+    </a>
+    <a href="/admin/participants" class="btn-secondary">
+      Szukaj uczestnika
+    </a>
+  </div>
+</AdminLayout>
