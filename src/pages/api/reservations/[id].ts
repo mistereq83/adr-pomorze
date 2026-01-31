@@ -2,12 +2,21 @@ import type { APIRoute } from 'astro';
 import { db } from '../../../db';
 import { reservations } from '../../../db/schema';
 import { eq } from 'drizzle-orm';
+import { sendSmsForEvent } from '../../../lib/sms';
 
 // PUT /api/reservations/:id - aktualizacja rezerwacji (status, płatność)
 export const PUT: APIRoute = async ({ params, request }) => {
   try {
     const id = parseInt(params.id!);
     const data = await request.json();
+    
+    // Pobierz obecny status przed zmianą
+    const currentReservation = await db.select()
+      .from(reservations)
+      .where(eq(reservations.id, id))
+      .get();
+    
+    const previousStatus = currentReservation?.status;
     
     const updateData: any = {};
     
@@ -52,7 +61,17 @@ export const PUT: APIRoute = async ({ params, request }) => {
       });
     }
     
-    return new Response(JSON.stringify(result[0]), {
+    // Wyślij SMS przy zmianie statusu
+    let smsResult = null;
+    if (data.status && data.status !== previousStatus) {
+      if (data.status === 'confirmed') {
+        smsResult = await sendSmsForEvent('reservation_confirmed', id);
+      } else if (data.status === 'paid') {
+        smsResult = await sendSmsForEvent('reservation_paid', id);
+      }
+    }
+    
+    return new Response(JSON.stringify({ ...result[0], smsResult }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });

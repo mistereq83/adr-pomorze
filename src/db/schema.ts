@@ -80,6 +80,31 @@ export const reservations = sqliteTable('reservations', {
   paidAt: text('paid_at'),
 });
 
+// Szablony SMS
+export const smsTemplates = sqliteTable('sms_templates', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  event: text('event').notNull().unique(), // 'reservation_confirmed', 'reservation_paid', 'course_reminder', etc.
+  name: text('name').notNull(),             // Nazwa do wyświetlenia w adminie
+  template: text('template').notNull(),     // Treść z {{zmienne}}
+  enabled: integer('enabled', { mode: 'boolean' }).default(true),
+  updatedAt: text('updated_at'),
+});
+
+// Log wysłanych SMS
+export const smsLog = sqliteTable('sms_log', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  templateEvent: text('template_event'),
+  recipientPhone: text('recipient_phone').notNull(),
+  recipientName: text('recipient_name'),
+  message: text('message').notNull(),
+  smsapiId: text('smsapi_id'),              // ID z SMSAPI
+  status: text('status').default('pending'), // 'pending', 'sent', 'delivered', 'failed'
+  errorMessage: text('error_message'),
+  cost: real('cost'),                        // Koszt w punktach
+  reservationId: integer('reservation_id').references(() => reservations.id),
+  createdAt: text('created_at').default('CURRENT_TIMESTAMP'),
+});
+
 // Typy TypeScript
 export type Course = typeof courses.$inferSelect;
 export type NewCourse = typeof courses.$inferInsert;
@@ -87,3 +112,5 @@ export type Participant = typeof participants.$inferSelect;
 export type NewParticipant = typeof participants.$inferInsert;
 export type Reservation = typeof reservations.$inferSelect;
 export type NewReservation = typeof reservations.$inferInsert;
+export type SmsTemplate = typeof smsTemplates.$inferSelect;
+export type SmsLog = typeof smsLog.$inferSelect;

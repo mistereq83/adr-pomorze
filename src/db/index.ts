@@ -77,6 +77,31 @@ export function initDatabase() {
       confirmed_at TEXT,
       paid_at TEXT
     );
+
+    -- Szablony SMS
+    CREATE TABLE IF NOT EXISTS sms_templates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      event TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      template TEXT NOT NULL,
+      enabled INTEGER DEFAULT 1,
+      updated_at TEXT
+    );
+
+    -- Log wysłanych SMS
+    CREATE TABLE IF NOT EXISTS sms_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      template_event TEXT,
+      recipient_phone TEXT NOT NULL,
+      recipient_name TEXT,
+      message TEXT NOT NULL,
+      smsapi_id TEXT,
+      status TEXT DEFAULT 'pending',
+      error_message TEXT,
+      cost REAL,
+      reservation_id INTEGER REFERENCES reservations(id),
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
   `);
   
   console.log('Database initialized at:', DB_PATH);
