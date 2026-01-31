@@ -404,7 +404,7 @@ const nextCourses = courses.slice(0, 3);
   </section>
   
   <!-- Cart Sticky Bar (hidden by default) -->
-  <div id="cart-bar" class="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-[var(--accent)] shadow-2xl z-50 transform translate-y-full transition-transform duration-300">
+  <div id="cart-bar" class="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-[var(--accent)] shadow-2xl z-50 transition-transform duration-300" style="display: none;">
     <div class="container-custom px-4 py-3">
       <div class="flex items-center justify-between gap-4">
         <div class="flex-1 min-w-0">
@@ -557,6 +557,20 @@ const nextCourses = courses.slice(0, 3);
 </style>
 
 <script>
+  // Toast notification
+  function showToast(message) {
+    const existing = document.getElementById('toast');
+    if (existing) existing.remove();
+    
+    const toast = document.createElement('div');
+    toast.id = 'toast';
+    toast.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-lg shadow-xl z-[100] text-sm font-medium';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => toast.remove(), 3000);
+  }
+  
   // Course Cart Logic
   const cart = new Map();
   
@@ -595,7 +609,7 @@ const nextCourses = courses.slice(0, 3);
         const existingSameType = Array.from(cart.values()).find(c => c.type === courseType);
         
         if (existingSameType) {
-          alert(`Masz już w koszyku kurs ${courseType} (${existingSameType.date}). Możesz wybrać tylko jeden termin danego typu szkolenia.`);
+          showToast(`Kurs ${courseType} już wybrany! Odznacz poprzedni termin, żeby wybrać inny.`);
           return;
         }
         
@@ -633,11 +647,12 @@ const nextCourses = courses.slice(0, 3);
     
     // Show/hide cart bar
     if (count > 0) {
-      cartBar.style.transform = 'translateY(0)';
       cartBar.style.display = 'block';
+      setTimeout(() => cartBar.style.transform = 'translateY(0)', 10);
       cartSpacer.style.height = '80px';
     } else {
       cartBar.style.transform = 'translateY(100%)';
+      setTimeout(() => cartBar.style.display = 'none', 300);
       cartSpacer.style.height = '0';
     }
   }
@@ -747,4 +762,7 @@ const nextCourses = courses.slice(0, 3);
       document.body.style.overflow = '';
     }
   });
+  
+  // Initialize - hide cart bar on load
+  updateCartUI();
 </script>
