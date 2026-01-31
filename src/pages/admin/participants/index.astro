@@ -75,39 +75,36 @@ function formatDate(dateStr: string | null) {
   </p>
   
   <!-- Mobile: Card View -->
-  <div class="md:hidden space-y-3">
+  <div class="block md:hidden space-y-3">
     {participantsWithCounts.length === 0 ? (
       <div class="bg-white rounded-xl p-6 text-center text-gray-500">
         {search ? 'Nie znaleziono uczestników' : 'Brak uczestników w bazie'}
       </div>
     ) : (
       participantsWithCounts.map((p) => (
-        <a href={`/admin/participants/${p.id}`} class="block bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:border-[var(--accent)] transition-colors">
-          <div class="flex items-start justify-between mb-2">
-            <div>
-              <div class="font-bold text-[var(--primary)]">{p.lastName} {p.firstName}</div>
-              <a href={`tel:${p.phone}`} class="text-sm text-[var(--accent)] font-mono">{p.phone}</a>
+        <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0 flex-1">
+              <a href={`/admin/participants/${p.id}`} class="font-bold text-[var(--primary)] hover:text-[var(--accent)] block truncate">
+                {p.lastName} {p.firstName}
+              </a>
+              <a href={`tel:${p.phone}`} class="text-[var(--accent)] font-mono text-sm block mt-1">
+                📞 {p.phone}
+              </a>
+              {p.email && <div class="text-xs text-gray-500 truncate mt-1">✉️ {p.email}</div>}
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-col items-end gap-1 flex-shrink-0">
               {p.hasCurrentAdr ? (
                 <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">ADR ✓</span>
               ) : (
                 <span class="px-2 py-1 bg-gray-100 text-gray-500 rounded text-xs">brak ADR</span>
               )}
-              {p.reservationCount > 0 && (
-                <span class="px-2 py-1 bg-[var(--accent)]/10 text-[var(--accent)] rounded text-xs font-bold">
-                  {p.reservationCount} szk.
-                </span>
-              )}
+              <span class="px-2 py-1 bg-[var(--accent)]/10 text-[var(--accent)] rounded text-xs font-bold">
+                {p.reservationCount} szk.
+              </span>
             </div>
           </div>
-          {(p.email || p.city) && (
-            <div class="text-xs text-gray-500 flex flex-wrap gap-2">
-              {p.email && <span>{p.email}</span>}
-              {p.city && <span>📍 {p.city}</span>}
-            </div>
-          )}
-        </a>
+        </div>
       ))
     )}
   </div>
