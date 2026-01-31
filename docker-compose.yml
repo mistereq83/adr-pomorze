@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  adr-pomorze:
+    build: .
+    ports:
+      - "4321:4321"
+    volumes:
+      - adr-data:/app/data
+    environment:
+      - HOST=0.0.0.0
+      - PORT=4321
+      - DATABASE_PATH=/app/data/adr.db
+    restart: unless-stopped
+
+volumes:
+  adr-data:
+    driver: local
