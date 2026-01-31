@@ -56,6 +56,28 @@ function getStatusBadge(status: string | null) {
   return badges[status || 'pending'] || 'bg-gray-100 text-gray-800';
 }
 
+function getStatusLabel(status: string | null) {
+  const labels: Record<string, string> = {
+    pending: 'Oczekuje',
+    confirmed: 'Potwierdzona',
+    paid: 'Opłacona',
+    completed: 'Zakończona',
+    cancelled: 'Anulowana',
+    no_show: 'Nieobecność',
+  };
+  return labels[status || 'pending'] || status || 'Nieznany';
+}
+
+function getSourceLabel(source: string | null) {
+  const labels: Record<string, string> = {
+    website: 'Strona WWW',
+    manual: 'Ręcznie',
+    telefon: 'Telefon',
+    email: 'Email',
+  };
+  return labels[source || 'website'] || source || '';
+}
+
 function getPaymentBadge(status: string | null) {
   const badges: Record<string, string> = {
     unpaid: 'bg-red-100 text-red-800',
@@ -109,7 +131,7 @@ function getPaymentBadge(status: string | null) {
                   {r.participant?.firstName} {r.participant?.lastName}
                 </span>
                 <span class={`text-xs px-2 py-1 rounded ${getStatusBadge(r.reservation.status)}`}>
-                  {r.reservation.status}
+                  {getStatusLabel(r.reservation.status)}
                 </span>
               </div>
               <div class="text-sm text-gray-500">
@@ -119,7 +141,7 @@ function getPaymentBadge(status: string | null) {
                 <span class={`text-xs px-2 py-0.5 rounded ${getPaymentBadge(r.reservation.paymentStatus)}`}>
                   {r.reservation.paymentStatus === 'paid' ? 'Opłacone' : r.reservation.paymentStatus === 'partial' ? 'Częściowo' : 'Nieopłacone'}
                 </span>
-                <span class="text-xs text-gray-400">{r.reservation.source}</span>
+                <span class="text-xs text-gray-400">{getSourceLabel(r.reservation.source)}</span>
               </div>
             </div>
           ))
