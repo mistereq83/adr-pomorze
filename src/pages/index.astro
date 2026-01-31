@@ -148,31 +148,39 @@ const nextCourses = courses.slice(0, 3);
             data-price={course.price}
             data-note={course.note}
           >
-            <div class="flex items-start justify-between mb-2">
-              <div class="font-mono text-sm md:text-base font-bold text-[var(--primary)]">{course.date}</div>
+            {/* Header: Typ + Badge */}
+            <div class="flex items-center justify-between mb-2">
+              <span class={`font-bold text-base ${course.type === 'CYSTERNY' ? 'text-[var(--accent)]' : 'text-[var(--primary)]'}`}>
+                {course.type}
+              </span>
               {course.note && (
-                <span class={`text-[10px] md:text-xs font-bold px-2 py-0.5 rounded ${course.note === 'WEEKEND' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
+                <span class={`text-[10px] font-bold px-2 py-0.5 rounded ${course.note === 'WEEKEND' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
                   {course.note === 'WEEKEND' ? 'WKD' : 'SPEC'}
                 </span>
               )}
             </div>
             
-            <div class={`font-semibold text-sm md:text-base mb-1 ${course.type === 'CYSTERNY' ? 'text-[var(--accent)]' : 'text-gray-700'}`}>
-              {course.type}
+            {/* Date + Duration */}
+            <div class="text-gray-500 text-sm mb-3">
+              {course.date} • {course.type === 'CYSTERNY' ? '2 dni' : '3 dni'}
             </div>
             
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-sm text-[var(--success)] font-medium">{course.spots} miejsc</span>
-              <span class="text-sm font-bold text-[var(--primary)]">{course.price} zł</span>
-            </div>
+            {/* Separator */}
+            <div class="border-t border-gray-100 my-3"></div>
             
-            <button 
-              class="add-course-btn w-full py-2 px-4 rounded-lg font-semibold text-sm transition-all
-                     bg-gray-100 text-gray-700 hover:bg-[var(--accent)] hover:text-white
-                     selected:bg-[var(--success)] selected:text-white"
-            >
-              <span class="btn-text">+ Dodaj</span>
-            </button>
+            {/* Price + Spots + Button */}
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-lg font-bold text-[var(--primary)]">{course.price} zł</div>
+                <div class="text-xs text-[var(--success)]">{course.spots} miejsc</div>
+              </div>
+              <button 
+                class="add-course-btn px-4 py-2 rounded-lg font-semibold text-sm transition-all
+                       bg-gray-100 text-gray-700 hover:bg-[var(--accent)] hover:text-white"
+              >
+                <span class="btn-text">+ Dodaj</span>
+              </button>
+            </div>
           </div>
         ))}
       </div>
