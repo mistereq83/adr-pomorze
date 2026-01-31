@@ -2,9 +2,9 @@
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { db } from '../../../db';
 import { courses } from '../../../db/schema';
+import { desc, eq } from 'drizzle-orm';
 
 let error = '';
-let success = false;
 
 if (Astro.request.method === 'POST') {
   try {
@@ -29,127 +29,188 @@ if (Astro.request.method === 'POST') {
   }
 }
 
+// Pobierz ostatnie ceny dla każdego typu kursu
 const courseTypes = [
-  { value: 'podstawowy', label: 'Kurs podstawowy' },
-  { value: 'cysterny', label: 'Kurs specjalistyczny - cysterny' },
-  { value: 'klasa1', label: 'Klasa 1 (materiały wybuchowe)' },
-  { value: 'klasa7', label: 'Klasa 7 (promieniotwórcze)' },
-  { value: 'odnowienie', label: 'Szkolenie odnawiające' },
+  { value: 'podstawowy', label: 'Podstawowy', emoji: '📚', days: 3 },
+  { value: 'cysterny', label: 'Cysterny', emoji: '🛢️', days: 2 },
+  { value: 'klasa1', label: 'Klasa 1', emoji: '💥', days: 2 },
+  { value: 'klasa7', label: 'Klasa 7', emoji: '☢️', days: 2 },
+  { value: 'odnowienie', label: 'Odnowienie', emoji: '🔄', days: 2 },
 ];
+
+// Pobierz ostatnią cenę dla każdego typu
+const lastPrices: Record<string, number | null> = {};
+for (const type of courseTypes) {
+  const lastCourse = await db.select({ price: courses.price })
+    .from(courses)
+    .where(eq(courses.courseType, type.value))
+    .orderBy(desc(courses.createdAt))
+    .limit(1);
+  lastPrices[type.value] = lastCourse[0]?.price || null;
+}
+
+// Domyślne ceny jeśli brak historii
+const defaultPrices: Record<string, number> = {
+  'podstawowy': 1200,
+  'cysterny': 600,
+  'klasa1': 700,
+  'klasa7': 700,
+  'odnowienie': 500,
+};
 ---
 
 <AdminLayout title="Dodaj nowy kurs">
-  <div class="max-w-2xl">
+  <div class="max-w-2xl mx-auto">
+    <a href="/admin/courses" class="text-gray-500 hover:text-gray-700 text-sm mb-4 inline-flex items-center gap-1">
+      ← Powrót do kursów
+    </a>
+    
     {error && (
-      <div class="bg-red-50 text-red-700 p-4 rounded-lg mb-4">
-        {error}
-      </div>
+      <div class="bg-red-50 text-red-700 p-4 rounded-lg mb-4">{error}</div>
     )}
     
-    <form method="POST" class="bg-white rounded-xl shadow-sm p-6 space-y-6">
-      <div class="grid md:grid-cols-2 gap-6">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Typ kursu *
-          </label>
-          <select 
-            name="courseType" 
-            required
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
-          >
-            {courseTypes.map(type => (
-              <option value={type.value}>{type.label}</option>
-            ))}
-          </select>
+    <form method="POST" class="space-y-6">
+      <!-- Typ kursu -->
+      <div class="bg-white rounded-xl shadow-sm p-6">
+        <h2 class="font-bold text-lg mb-4 flex items-center gap-2">
+          <span class="w-7 h-7 bg-[var(--accent)] text-white rounded-full flex items-center justify-center text-sm">1</span>
+          Typ kursu
+        </h2>
+        
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+          {courseTypes.map((type, i) => (
+            <label class="flex flex-col items-center p-3 border-2 border-gray-200 rounded-xl cursor-pointer transition-all hover:border-[var(--accent)] has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent)]/5">
+              <input 
+                type="radio" 
+                name="courseType" 
+                value={type.value}
+                checked={i === 0}
+                required
+                class="sr-only"
+                onchange={`updatePrice('${type.value}')`}
+              />
+              <span class="text-2xl mb-1">{type.emoji}</span>
+              <span class="text-sm font-medium text-center">{type.label}</span>
+              <span class="text-xs text-gray-500">{type.days} dni</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <!-- Daty i lokalizacja -->
+      <div class="bg-white rounded-xl shadow-sm p-6">
+        <h2 class="font-bold text-lg mb-4 flex items-center gap-2">
+          <span class="w-7 h-7 bg-[var(--accent)] text-white rounded-full flex items-center justify-center text-sm">2</span>
+          Termin
+        </h2>
+        
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Od *</label>
+            <input 
+              type="date" 
+              name="startDate" 
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Do *</label>
+            <input 
+              type="date" 
+              name="endDate" 
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+            />
+          </div>
         </div>
         
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Lokalizacja
-          </label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Lokalizacja</label>
           <input 
             type="text" 
             name="location" 
             value="Gdańsk"
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
           />
         </div>
       </div>
-      
-      <div class="grid md:grid-cols-2 gap-6">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Data rozpoczęcia *
-          </label>
-          <input 
-            type="date" 
-            name="startDate" 
-            required
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
-          />
+
+      <!-- Cena i miejsca -->
+      <div class="bg-white rounded-xl shadow-sm p-6">
+        <h2 class="font-bold text-lg mb-4 flex items-center gap-2">
+          <span class="w-7 h-7 bg-[var(--accent)] text-white rounded-full flex items-center justify-center text-sm">3</span>
+          Szczegóły
+        </h2>
+        
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Cena (zł)
+              <span id="priceHint" class="text-xs text-gray-400 ml-1"></span>
+            </label>
+            <input 
+              type="number" 
+              name="price" 
+              id="priceInput"
+              step="1"
+              value={lastPrices['podstawowy'] || defaultPrices['podstawowy']}
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent text-lg font-bold"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Max uczestników</label>
+            <input 
+              type="number" 
+              name="maxParticipants" 
+              value="15"
+              min="1"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+            />
+          </div>
         </div>
         
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Data zakończenia *
-          </label>
-          <input 
-            type="date" 
-            name="endDate" 
-            required
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
-          />
+          <label class="block text-sm font-medium text-gray-700 mb-1">Notatki</label>
+          <textarea 
+            name="notes" 
+            rows="2"
+            placeholder="Opcjonalne uwagi..."
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+          ></textarea>
         </div>
       </div>
-      
-      <div class="grid md:grid-cols-2 gap-6">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Maksymalna liczba uczestników
-          </label>
-          <input 
-            type="number" 
-            name="maxParticipants" 
-            value="15"
-            min="1"
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
-          />
-        </div>
-        
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Cena (zł)
-          </label>
-          <input 
-            type="number" 
-            name="price" 
-            step="0.01"
-            placeholder="np. 1200.00"
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
-          />
-        </div>
-      </div>
-      
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">
-          Notatki
-        </label>
-        <textarea 
-          name="notes" 
-          rows="3"
-          placeholder="Dodatkowe informacje o kursie..."
-          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
-        ></textarea>
-      </div>
-      
-      <div class="flex items-center gap-4">
-        <button type="submit" class="btn-primary">
-          Dodaj kurs
-        </button>
-        <a href="/admin/courses" class="text-gray-500 hover:text-gray-700">
-          Anuluj
-        </a>
-      </div>
+
+      <!-- Submit -->
+      <button type="submit" class="w-full btn-primary py-4 text-lg">
+        Dodaj kurs
+      </button>
     </form>
   </div>
+
+  <script is:inline define:vars={{ lastPrices, defaultPrices }}>
+    function updatePrice(courseType) {
+      const priceInput = document.getElementById('priceInput');
+      const priceHint = document.getElementById('priceHint');
+      
+      const price = lastPrices[courseType] || defaultPrices[courseType] || 0;
+      priceInput.value = price;
+      
+      if (lastPrices[courseType]) {
+        priceHint.textContent = '(ostatnia cena)';
+      } else {
+        priceHint.textContent = '(sugerowana)';
+      }
+    }
+    
+    // Set initial hint
+    document.addEventListener('DOMContentLoaded', () => {
+      const priceHint = document.getElementById('priceHint');
+      if (lastPrices['podstawowy']) {
+        priceHint.textContent = '(ostatnia cena)';
+      } else {
+        priceHint.textContent = '(sugerowana)';
+      }
+    });
+  </script>
 </AdminLayout>
