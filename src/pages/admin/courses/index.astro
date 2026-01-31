@@ -2,18 +2,23 @@
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { db } from '../../../db';
 import { courses, reservations } from '../../../db/schema';
-import { eq, count, desc } from 'drizzle-orm';
+import { eq, count, desc, and, notInArray } from 'drizzle-orm';
 
 // Pobierz kursy z liczbą rezerwacji
 const allCourses = await db.select().from(courses).orderBy(desc(courses.startDate));
 
-// Policz rezerwacje dla każdego kursu
+// Policz rezerwacje dla każdego kursu (bez anulowanych)
 const coursesWithCounts = await Promise.all(
   allCourses.map(async (course) => {
     const reservationCount = await db
       .select({ count: count() })
       .from(reservations)
-      .where(eq(reservations.courseId, course.id));
+      .where(
+        and(
+          eq(reservations.courseId, course.id),
+          notInArray(reservations.status, ['cancelled', 'no_show'])
+        )
+      );
     return {
       ...course,
       reservationCount: reservationCount[0].count,

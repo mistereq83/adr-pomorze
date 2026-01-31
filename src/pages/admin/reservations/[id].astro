@@ -2,7 +2,7 @@
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { db } from '../../../db';
 import { courses, participants, reservations } from '../../../db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and, notInArray, count } from 'drizzle-orm';
 
 const { id } = Astro.params;
 
@@ -24,6 +24,19 @@ const course = await db.select()
   .from(courses)
   .where(eq(courses.id, reservation.courseId))
   .get();
+
+// Policz aktywne rezerwacje dla kursu (bez anulowanych)
+const activeReservations = course ? await db
+  .select({ count: count() })
+  .from(reservations)
+  .where(
+    and(
+      eq(reservations.courseId, course.id),
+      notInArray(reservations.status, ['cancelled', 'no_show'])
+    )
+  ) : [{ count: 0 }];
+
+const spotsAvailable = course ? (course.maxParticipants || 15) - activeReservations[0].count : 0;
 
 const participant = await db.select()
   .from(participants)
@@ -181,7 +194,7 @@ const paymentLabels: Record<string, string> = {
             </div>
             <div>
               <dt class="text-sm text-gray-500">Miejsca</dt>
-              <dd class="font-medium">{course.spotsAvailable} / {course.maxParticipants}</dd>
+              <dd class="font-medium">{spotsAvailable} / {course.maxParticipants}</dd>
             </div>
           </dl>
         ) : (
