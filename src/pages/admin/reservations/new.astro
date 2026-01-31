@@ -33,8 +33,6 @@ if (Astro.request.method === 'POST') {
       courseId: parseInt(formData.get('courseId') as string),
       participantId: parseInt(participantId),
       status: formData.get('status') as string || 'confirmed',
-      paymentMethod: formData.get('paymentMethod') as string || null,
-      paymentStatus: formData.get('paymentStatus') as string || 'unpaid',
       needsInvoice: formData.get('needsInvoice') === 'on',
       invoiceCompany: formData.get('invoiceCompany') as string || null,
       invoiceNip: formData.get('invoiceNip') as string || null,
@@ -263,27 +261,17 @@ function formatDateShort(dateStr: string) {
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
             <div class="flex flex-wrap gap-2">
-              <label class="flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent)]/5">
-                <input type="radio" name="status" value="confirmed" checked class="text-[var(--accent)]" />
-                <span>✓ Potwierdzona</span>
-              </label>
-              <label class="flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent)]/5">
-                <input type="radio" name="status" value="pending" class="text-[var(--accent)]" />
+              <label class="flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer has-[:checked]:border-yellow-500 has-[:checked]:bg-yellow-50">
+                <input type="radio" name="status" value="pending" class="text-yellow-500" />
                 <span>⏳ Oczekująca</span>
               </label>
-            </div>
-          </div>
-          
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Płatność</label>
-            <div class="flex flex-wrap gap-2">
-              <label class="flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent)]/5">
-                <input type="radio" name="paymentStatus" value="unpaid" checked class="text-[var(--accent)]" />
-                <span>💸 Nieopłacone</span>
+              <label class="flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
+                <input type="radio" name="status" value="confirmed" checked class="text-blue-500" />
+                <span>✓ Potwierdzona</span>
               </label>
-              <label class="flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent)]/5">
-                <input type="radio" name="paymentStatus" value="paid" class="text-[var(--accent)]" />
-                <span>✓ Opłacone</span>
+              <label class="flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer has-[:checked]:border-green-500 has-[:checked]:bg-green-50">
+                <input type="radio" name="status" value="paid" class="text-green-500" />
+                <span>💰 Opłacona</span>
               </label>
             </div>
           </div>

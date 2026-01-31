@@ -55,11 +55,6 @@ if (Astro.request.method === 'POST') {
         .set({ status: formData.get('status') as string })
         .where(eq(reservations.id, parseInt(id)));
       message = 'Status zaktualizowany';
-    } else if (action === 'update_payment') {
-      await db.update(reservations)
-        .set({ paymentStatus: formData.get('paymentStatus') as string })
-        .where(eq(reservations.id, parseInt(id)));
-      message = 'Status płatności zaktualizowany';
     } else if (action === 'delete') {
       await db.delete(reservations).where(eq(reservations.id, parseInt(id)));
       return Astro.redirect('/admin/reservations');
@@ -83,22 +78,20 @@ const statusColors: Record<string, string> = {
   cancelled: 'bg-red-100 text-red-800',
 };
 
-const paymentColors: Record<string, string> = {
-  unpaid: 'bg-red-100 text-red-800',
-  paid: 'bg-green-100 text-green-800',
-  partial: 'bg-yellow-100 text-yellow-800',
-};
-
 const statusLabels: Record<string, string> = {
   pending: 'Oczekująca',
   confirmed: 'Potwierdzona',
+  paid: 'Opłacona',
+  completed: 'Zakończona',
   cancelled: 'Anulowana',
 };
 
-const paymentLabels: Record<string, string> = {
-  unpaid: 'Nieopłacone',
-  paid: 'Opłacone',
-  partial: 'Częściowo opłacone',
+const statusColors: Record<string, string> = {
+  pending: 'bg-yellow-100 text-yellow-800',
+  confirmed: 'bg-blue-100 text-blue-800',
+  paid: 'bg-green-100 text-green-800',
+  completed: 'bg-gray-100 text-gray-800',
+  cancelled: 'bg-red-100 text-red-800',
 };
 ---
 
@@ -203,9 +196,9 @@ const paymentLabels: Record<string, string> = {
       </div>
 
       <!-- Status rezerwacji -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:col-span-2">
         <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
-          <span class="text-2xl">📋</span> Status rezerwacji
+          <span class="text-2xl">📋</span> Status
         </h2>
         <div class="flex flex-wrap gap-2">
           <form method="POST">
@@ -218,8 +211,22 @@ const paymentLabels: Record<string, string> = {
           <form method="POST">
             <input type="hidden" name="action" value="update_status" />
             <input type="hidden" name="status" value="confirmed" />
-            <button type="submit" class={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${reservation.status === 'confirmed' ? 'bg-green-500 text-white ring-2 ring-green-300' : 'bg-green-50 text-green-700 hover:bg-green-100'}`}>
+            <button type="submit" class={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${reservation.status === 'confirmed' ? 'bg-blue-500 text-white ring-2 ring-blue-300' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}>
               ✓ Potwierdzona
+            </button>
+          </form>
+          <form method="POST">
+            <input type="hidden" name="action" value="update_status" />
+            <input type="hidden" name="status" value="paid" />
+            <button type="submit" class={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${reservation.status === 'paid' ? 'bg-green-500 text-white ring-2 ring-green-300' : 'bg-green-50 text-green-700 hover:bg-green-100'}`}>
+              💰 Opłacona
+            </button>
+          </form>
+          <form method="POST">
+            <input type="hidden" name="action" value="update_status" />
+            <input type="hidden" name="status" value="completed" />
+            <button type="submit" class={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${reservation.status === 'completed' ? 'bg-gray-500 text-white ring-2 ring-gray-300' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+              ✔ Zakończona
             </button>
           </form>
           <form method="POST">
@@ -227,42 +234,6 @@ const paymentLabels: Record<string, string> = {
             <input type="hidden" name="status" value="cancelled" />
             <button type="submit" class={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${reservation.status === 'cancelled' ? 'bg-red-500 text-white ring-2 ring-red-300' : 'bg-red-50 text-red-700 hover:bg-red-100'}`}>
               ✕ Anulowana
-            </button>
-          </form>
-        </div>
-      </div>
-
-      <!-- Status płatności -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
-          <span class="text-2xl">💳</span> Płatność
-        </h2>
-        {reservation.paymentMethod && (
-          <div class="mb-3">
-            <span class="text-sm text-gray-500">Metoda:</span>
-            <span class="ml-2 font-medium">{reservation.paymentMethod}</span>
-          </div>
-        )}
-        <div class="flex flex-wrap gap-2">
-          <form method="POST">
-            <input type="hidden" name="action" value="update_payment" />
-            <input type="hidden" name="paymentStatus" value="unpaid" />
-            <button type="submit" class={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${reservation.paymentStatus === 'unpaid' ? 'bg-red-500 text-white ring-2 ring-red-300' : 'bg-red-50 text-red-700 hover:bg-red-100'}`}>
-              💸 Nieopłacone
-            </button>
-          </form>
-          <form method="POST">
-            <input type="hidden" name="action" value="update_payment" />
-            <input type="hidden" name="paymentStatus" value="partial" />
-            <button type="submit" class={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${reservation.paymentStatus === 'partial' ? 'bg-yellow-500 text-white ring-2 ring-yellow-300' : 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100'}`}>
-              ⚡ Częściowo
-            </button>
-          </form>
-          <form method="POST">
-            <input type="hidden" name="action" value="update_payment" />
-            <input type="hidden" name="paymentStatus" value="paid" />
-            <button type="submit" class={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${reservation.paymentStatus === 'paid' ? 'bg-green-500 text-white ring-2 ring-green-300' : 'bg-green-50 text-green-700 hover:bg-green-100'}`}>
-              ✓ Opłacone
             </button>
           </form>
         </div>

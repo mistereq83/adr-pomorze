@@ -78,14 +78,7 @@ function getSourceLabel(source: string | null) {
   return labels[source || 'website'] || source || '';
 }
 
-function getPaymentBadge(status: string | null) {
-  const badges: Record<string, string> = {
-    unpaid: 'bg-red-100 text-red-800',
-    partial: 'bg-yellow-100 text-yellow-800',
-    paid: 'bg-green-100 text-green-800',
-  };
-  return badges[status || 'unpaid'] || 'bg-gray-100 text-gray-800';
-}
+// Status jednopoziomowy - bez osobnej płatności
 ---
 
 <AdminLayout title="Dashboard">
@@ -137,11 +130,8 @@ function getPaymentBadge(status: string | null) {
               <div class="text-sm text-gray-500">
                 {r.course?.courseType} • {formatDate(r.course?.startDate || null)}
               </div>
-              <div class="flex items-center gap-2 mt-1">
-                <span class={`text-xs px-2 py-0.5 rounded ${getPaymentBadge(r.reservation.paymentStatus)}`}>
-                  {r.reservation.paymentStatus === 'paid' ? 'Opłacone' : r.reservation.paymentStatus === 'partial' ? 'Częściowo' : 'Nieopłacone'}
-                </span>
-                <span class="text-xs text-gray-400">{getSourceLabel(r.reservation.source)}</span>
+              <div class="text-xs text-gray-400 mt-1">
+                {getSourceLabel(r.reservation.source)}
               </div>
             </div>
           ))

@@ -39,14 +39,7 @@ function getStatusBadge(status: string | null) {
   return badges[status || 'pending'] || badges.pending;
 }
 
-function getPaymentBadge(status: string | null) {
-  const badges: Record<string, { class: string; label: string }> = {
-    unpaid: { class: 'bg-red-100 text-red-800', label: 'Nieopłacone' },
-    partial: { class: 'bg-yellow-100 text-yellow-800', label: 'Częściowo' },
-    paid: { class: 'bg-green-100 text-green-800', label: 'Opłacone' },
-  };
-  return badges[status || 'unpaid'] || badges.unpaid;
-}
+// Status jednopoziomowy - bez osobnej płatności
 
 function formatDate(dateStr: string | null) {
   if (!dateStr) return '-';
@@ -94,7 +87,6 @@ function formatDate(dateStr: string | null) {
           <th class="text-left p-4 font-medium text-gray-700">Uczestnik</th>
           <th class="text-left p-4 font-medium text-gray-700">Kurs</th>
           <th class="text-left p-4 font-medium text-gray-700">Status</th>
-          <th class="text-left p-4 font-medium text-gray-700">Płatność</th>
           <th class="text-left p-4 font-medium text-gray-700">Źródło</th>
           <th class="text-left p-4 font-medium text-gray-700">Data zgł.</th>
           <th class="text-left p-4 font-medium text-gray-700">Akcje</th>
@@ -103,7 +95,7 @@ function formatDate(dateStr: string | null) {
       <tbody class="divide-y">
         {allReservations.length === 0 ? (
           <tr>
-            <td colspan="7" class="p-8 text-center text-gray-500">
+            <td colspan="6" class="p-8 text-center text-gray-500">
               Brak rezerwacji
             </td>
           </tr>
@@ -131,18 +123,6 @@ function formatDate(dateStr: string | null) {
                   <option value="completed" selected={r.reservation.status === 'completed'}>Zakończona</option>
                   <option value="cancelled" selected={r.reservation.status === 'cancelled'}>Anulowana</option>
                   <option value="no_show" selected={r.reservation.status === 'no_show'}>Nieobecność</option>
-                </select>
-              </td>
-              <td class="p-4">
-                <select 
-                  class={`px-2 py-1 rounded text-xs font-medium border-0 ${getPaymentBadge(r.reservation.paymentStatus).class}`}
-                  data-reservation-id={r.reservation.id}
-                  data-field="paymentStatus"
-                  onchange="updateReservation(this)"
-                >
-                  <option value="unpaid" selected={r.reservation.paymentStatus === 'unpaid'}>Nieopłacone</option>
-                  <option value="partial" selected={r.reservation.paymentStatus === 'partial'}>Częściowo</option>
-                  <option value="paid" selected={r.reservation.paymentStatus === 'paid'}>Opłacone</option>
                 </select>
               </td>
               <td class="p-4 text-sm text-gray-500">{r.reservation.source}</td>
