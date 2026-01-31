@@ -3,6 +3,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { db } from '../../../db';
 import { courses, participants, reservations } from '../../../db/schema';
 import { eq, gte, asc } from 'drizzle-orm';
+import { validateAndNormalizePhone } from '../../../lib/phone';
 
 let error = '';
 const preselectedParticipantId = Astro.url.searchParams.get('participantId');
@@ -15,10 +16,19 @@ if (Astro.request.method === 'POST') {
     let participantId = formData.get('participantId') as string;
     
     if (!participantId || participantId === 'new') {
+      // Walidacja i normalizacja numeru telefonu
+      const rawPhone = formData.get('phone') as string;
+      const normalizedPhone = validateAndNormalizePhone(rawPhone);
+      
+      if (!normalizedPhone) {
+        error = 'Nieprawidłowy numer telefonu. Podaj 9-cyfrowy polski numer komórkowy.';
+        throw new Error(error);
+      }
+      
       const newParticipant = await db.insert(participants).values({
         firstName: formData.get('firstName') as string,
         lastName: formData.get('lastName') as string,
-        phone: formData.get('phone') as string,
+        phone: normalizedPhone,
         email: formData.get('email') as string || null,
         pesel: formData.get('pesel') as string || null,
         hasCurrentAdr: formData.get('hasCurrentAdr') === 'on',

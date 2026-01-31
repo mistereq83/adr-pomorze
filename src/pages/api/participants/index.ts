@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { db } from '../../../db';
 import { participants } from '../../../db/schema';
 import { like, or, desc } from 'drizzle-orm';
+import { validateAndNormalizePhone } from '../../../lib/phone';
 
 // GET /api/participants - lista uczestników z wyszukiwaniem
 export const GET: APIRoute = async ({ url }) => {
@@ -48,6 +49,17 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     const data = await request.json();
     
+    // Walidacja numeru telefonu
+    const normalizedPhone = validateAndNormalizePhone(data.phone);
+    if (!normalizedPhone) {
+      return new Response(JSON.stringify({ 
+        error: 'Nieprawidłowy numer telefonu. Podaj 9-cyfrowy polski numer komórkowy.' 
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
     const result = await db.insert(participants).values({
       firstName: data.firstName,
       lastName: data.lastName,
@@ -57,7 +69,7 @@ export const POST: APIRoute = async ({ request }) => {
       street: data.street,
       city: data.city,
       postalCode: data.postalCode,
-      phone: data.phone,
+      phone: normalizedPhone,
       email: data.email,
       hasCurrentAdr: data.hasCurrentAdr || false,
       currentAdrNumber: data.currentAdrNumber,
