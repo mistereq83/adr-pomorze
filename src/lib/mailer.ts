@@ -2,13 +2,18 @@ import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 
 // Konfiguracja z ENV (bezpiecznie, nie w kodzie)
+const smtpPort = parseInt(import.meta.env.SMTP_PORT || process.env.SMTP_PORT || '587');
 const config = {
   host: import.meta.env.SMTP_HOST || process.env.SMTP_HOST,
-  port: parseInt(import.meta.env.SMTP_PORT || process.env.SMTP_PORT || '587'),
-  secure: false, // TLS na porcie 587
+  port: smtpPort,
+  secure: smtpPort === 465, // true dla SSL (465), false dla STARTTLS (587)
   auth: {
     user: import.meta.env.SMTP_USER || process.env.SMTP_USER,
     pass: import.meta.env.SMTP_PASS || process.env.SMTP_PASS,
+  },
+  tls: {
+    // Niektóre serwery SMTP wymagają tej opcji
+    rejectUnauthorized: false,
   },
 };
 
