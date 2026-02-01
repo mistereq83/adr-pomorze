@@ -63,23 +63,23 @@ const penalties = [
         Kogo dotyczą przepisy ADR?
       </h2>
       
-      <div class="grid md:grid-cols-3 gap-3 md:gap-6 max-w-5xl mx-auto">
-        <div class="bg-gray-50 rounded-xl md:rounded-2xl p-4 md:p-6 border-l-4 border-[var(--accent)]">
-          <div class="text-2xl md:text-3xl mb-2 md:mb-3">🚛</div>
-          <h3 class="font-bold text-base md:text-lg mb-1 md:mb-2">Przewoźnicy</h3>
-          <p class="text-gray-600 text-sm md:text-base">Firmy wykonujące transport drogowy towarów niebezpiecznych</p>
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-6 max-w-5xl mx-auto">
+        <div class="bg-gray-50 rounded-xl md:rounded-2xl p-3 md:p-6 border-l-4 border-[var(--accent)]">
+          <div class="text-xl md:text-3xl mb-1 md:mb-3">🚛</div>
+          <h3 class="font-bold text-sm md:text-lg mb-0.5 md:mb-2">Przewoźnicy</h3>
+          <p class="text-gray-600 text-xs md:text-base">Transport drogowy towarów niebezpiecznych</p>
         </div>
         
-        <div class="bg-gray-50 rounded-xl md:rounded-2xl p-4 md:p-6 border-l-4 border-[var(--accent)]">
-          <div class="text-2xl md:text-3xl mb-2 md:mb-3">📦</div>
-          <h3 class="font-bold text-base md:text-lg mb-1 md:mb-2">Załadunek / Rozładunek</h3>
-          <p class="text-gray-600 text-sm md:text-base">Podmioty wykonujące załadunek lub rozładunek towarów niebezpiecznych</p>
+        <div class="bg-gray-50 rounded-xl md:rounded-2xl p-3 md:p-6 border-l-4 border-[var(--accent)]">
+          <div class="text-xl md:text-3xl mb-1 md:mb-3">📦</div>
+          <h3 class="font-bold text-sm md:text-lg mb-0.5 md:mb-2">Załadunek</h3>
+          <p class="text-gray-600 text-xs md:text-base">Załadunek lub rozładunek towarów niebezpiecznych</p>
         </div>
         
-        <div class="bg-gray-50 rounded-xl md:rounded-2xl p-4 md:p-6 border-l-4 border-[var(--accent)]">
-          <div class="text-2xl md:text-3xl mb-2 md:mb-3">📤</div>
-          <h3 class="font-bold text-base md:text-lg mb-1 md:mb-2">Nadawcy <span class="text-[var(--accent)] text-sm font-normal">(od 2023!)</span></h3>
-          <p class="text-gray-600 text-sm md:text-base">Każde przedsiębiorstwo nadające towary niebezpieczne do transportu</p>
+        <div class="bg-gray-50 rounded-xl md:rounded-2xl p-3 md:p-6 border-l-4 border-[var(--accent)] col-span-2 md:col-span-1">
+          <div class="text-xl md:text-3xl mb-1 md:mb-3">📤</div>
+          <h3 class="font-bold text-sm md:text-lg mb-0.5 md:mb-2">Nadawcy <span class="text-[var(--accent)] text-xs md:text-sm font-normal">(od 2023!)</span></h3>
+          <p class="text-gray-600 text-xs md:text-base">Każde przedsiębiorstwo nadające towary niebezpieczne do transportu</p>
         </div>
       </div>
     </div>
@@ -92,44 +92,44 @@ const penalties = [
         Twoje obowiązki jako przedsiębiorcy
       </h2>
       
-      <div class="max-w-3xl mx-auto space-y-3 md:space-y-6">
-        <div class="bg-white rounded-xl p-4 md:p-6 shadow-sm flex gap-3 md:gap-4">
-          <div class="w-10 h-10 md:w-12 md:h-12 bg-[var(--accent)]/10 rounded-lg flex items-center justify-center flex-shrink-0">
-            <span class="text-xl md:text-2xl">👤</span>
+      <div class="max-w-3xl mx-auto grid grid-cols-2 md:grid-cols-1 gap-2 md:gap-4">
+        <div class="bg-white rounded-xl p-3 md:p-6 shadow-sm md:flex md:gap-4">
+          <div class="w-8 h-8 md:w-12 md:h-12 bg-[var(--accent)]/10 rounded-lg flex items-center justify-center flex-shrink-0 mb-2 md:mb-0">
+            <span class="text-lg md:text-2xl">👤</span>
           </div>
           <div>
-            <h3 class="font-bold text-base md:text-lg mb-0.5 md:mb-1">Wyznacz Doradcę DGSA</h3>
-            <p class="text-gray-600 text-sm md:text-base">Doradca do spraw bezpieczeństwa w transporcie towarów niebezpiecznych — może być zewnętrzny</p>
+            <h3 class="font-bold text-sm md:text-lg mb-0.5 md:mb-1">Wyznacz Doradcę DGSA</h3>
+            <p class="text-gray-600 text-xs md:text-base hidden md:block">Doradca do spraw bezpieczeństwa w transporcie towarów niebezpiecznych — może być zewnętrzny</p>
           </div>
         </div>
         
-        <div class="bg-white rounded-xl p-4 md:p-6 shadow-sm flex gap-3 md:gap-4">
-          <div class="w-10 h-10 md:w-12 md:h-12 bg-[var(--accent)]/10 rounded-lg flex items-center justify-center flex-shrink-0">
-            <span class="text-xl md:text-2xl">📊</span>
+        <div class="bg-white rounded-xl p-3 md:p-6 shadow-sm md:flex md:gap-4">
+          <div class="w-8 h-8 md:w-12 md:h-12 bg-[var(--accent)]/10 rounded-lg flex items-center justify-center flex-shrink-0 mb-2 md:mb-0">
+            <span class="text-lg md:text-2xl">📊</span>
           </div>
           <div>
-            <h3 class="font-bold text-base md:text-lg mb-0.5 md:mb-1">Złóż roczne sprawozdanie</h3>
-            <p class="text-gray-600 text-sm md:text-base">Termin: <strong>do 28 lutego</strong> każdego roku. Sprawozdanie przygotowuje Doradca DGSA i przesyła do ITD.</p>
+            <h3 class="font-bold text-sm md:text-lg mb-0.5 md:mb-1">Sprawozdanie roczne</h3>
+            <p class="text-gray-600 text-xs md:text-base"><span class="hidden md:inline">Termin: </span><strong>do 28 lutego</strong></p>
           </div>
         </div>
         
-        <div class="bg-white rounded-xl p-4 md:p-6 shadow-sm flex gap-3 md:gap-4">
-          <div class="w-10 h-10 md:w-12 md:h-12 bg-[var(--accent)]/10 rounded-lg flex items-center justify-center flex-shrink-0">
-            <span class="text-xl md:text-2xl">🎓</span>
+        <div class="bg-white rounded-xl p-3 md:p-6 shadow-sm md:flex md:gap-4">
+          <div class="w-8 h-8 md:w-12 md:h-12 bg-[var(--accent)]/10 rounded-lg flex items-center justify-center flex-shrink-0 mb-2 md:mb-0">
+            <span class="text-lg md:text-2xl">🎓</span>
           </div>
           <div>
-            <h3 class="font-bold text-base md:text-lg mb-0.5 md:mb-1">Przeszkol pracowników</h3>
-            <p class="text-gray-600 text-sm md:text-base">Osoby zatrudnione przy załadunku/rozładunku muszą przejść szkolenie ADR</p>
+            <h3 class="font-bold text-sm md:text-lg mb-0.5 md:mb-1">Szkolenia ADR</h3>
+            <p class="text-gray-600 text-xs md:text-base hidden md:block">Osoby zatrudnione przy załadunku/rozładunku muszą przejść szkolenie ADR</p>
           </div>
         </div>
         
-        <div class="bg-white rounded-xl p-4 md:p-6 shadow-sm flex gap-3 md:gap-4">
-          <div class="w-10 h-10 md:w-12 md:h-12 bg-[var(--accent)]/10 rounded-lg flex items-center justify-center flex-shrink-0">
-            <span class="text-xl md:text-2xl">📁</span>
+        <div class="bg-white rounded-xl p-3 md:p-6 shadow-sm md:flex md:gap-4">
+          <div class="w-8 h-8 md:w-12 md:h-12 bg-[var(--accent)]/10 rounded-lg flex items-center justify-center flex-shrink-0 mb-2 md:mb-0">
+            <span class="text-lg md:text-2xl">📁</span>
           </div>
           <div>
-            <h3 class="font-bold text-base md:text-lg mb-0.5 md:mb-1">Archiwizuj dokumenty</h3>
-            <p class="text-gray-600 text-sm md:text-base">Sprawozdania roczne przechowuj przez <strong>5 lat</strong></p>
+            <h3 class="font-bold text-sm md:text-lg mb-0.5 md:mb-1">Archiwizacja</h3>
+            <p class="text-gray-600 text-xs md:text-base"><strong>5 lat</strong><span class="hidden md:inline"> przechowywania</span></p>
           </div>
         </div>
       </div>
@@ -155,14 +155,14 @@ const penalties = [
             </div>
           </div>
           
-          <div class="divide-y divide-red-100">
-            {penalties.map((item) => (
-              <div class="px-4 md:px-6 py-3 md:py-4 flex items-center justify-between gap-2 md:gap-4">
-                <div class="flex items-center gap-2 md:gap-3">
-                  <span class="text-base md:text-xl hidden sm:inline">{item.icon}</span>
-                  <span class="text-gray-800 text-sm md:text-base">{item.violation}</span>
+          <div class="grid grid-cols-2 md:grid-cols-1 divide-y md:divide-y divide-red-100">
+            {penalties.map((item, idx) => (
+              <div class={`px-3 md:px-6 py-2.5 md:py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-0.5 md:gap-4 ${idx % 2 === 0 ? 'border-r md:border-r-0 border-red-100' : ''}`}>
+                <div class="flex items-center gap-1.5 md:gap-3">
+                  <span class="text-sm md:text-xl">{item.icon}</span>
+                  <span class="text-gray-800 text-xs md:text-base leading-tight">{item.violation}</span>
                 </div>
-                <span class="font-bold text-red-600 whitespace-nowrap text-sm md:text-base">{item.penalty}</span>
+                <span class="font-bold text-red-600 whitespace-nowrap text-xs md:text-base pl-5 md:pl-0">{item.penalty}</span>
               </div>
             ))}
           </div>
