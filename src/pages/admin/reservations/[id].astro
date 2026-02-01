@@ -1,7 +1,7 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { db } from '../../../db';
-import { courses, participants, reservations, completionTokens } from '../../../db/schema';
+import { courses, participants, reservations, completionTokens, smsLog } from '../../../db/schema';
 import { eq, and, notInArray, count, desc } from 'drizzle-orm';
 import { sendSmsForEvent } from '../../../lib/sms';
 
@@ -101,8 +101,9 @@ if (Astro.request.method === 'POST') {
       if (linkResult.success) parts.push('Link do danych wysłany');
       message = parts.join(' + ');
     } else if (action === 'delete') {
-      // Najpierw usuń powiązane tokeny
+      // Usuń powiązane rekordy (foreign keys)
       await db.delete(completionTokens).where(eq(completionTokens.reservationId, parseInt(id)));
+      await db.delete(smsLog).where(eq(smsLog.reservationId, parseInt(id)));
       // Potem usuń rezerwację
       await db.delete(reservations).where(eq(reservations.id, parseInt(id)));
       return Astro.redirect('/admin/reservations?msg=deleted');
