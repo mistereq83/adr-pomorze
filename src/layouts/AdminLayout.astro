@@ -85,20 +85,42 @@ const navItems = [
   </nav>
   
   <!-- Mobile nav -->
-  <div class="md:hidden bg-white border-b px-4 py-2 flex gap-2 overflow-x-auto">
-    {navItems.map(item => (
-      <a 
-        href={item.href} 
-        class={`px-3 py-2 rounded-lg text-sm whitespace-nowrap ${
-          currentPath === item.href 
-            ? 'bg-[var(--primary)] text-white' 
-            : 'bg-gray-100 text-gray-700'
-        }`}
-      >
-        {item.icon} {item.label}
-      </a>
-    ))}
+  <div class="md:hidden bg-white border-b relative">
+    <!-- Gradient wskaźnik po prawej -->
+    <div class="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent pointer-events-none z-10" id="scroll-indicator"></div>
+    
+    <div class="px-4 py-2 flex gap-2 overflow-x-auto scroll-smooth" id="mobile-nav" style="scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;">
+      {navItems.map(item => (
+        <a 
+          href={item.href} 
+          class={`px-3 py-2 rounded-lg text-sm whitespace-nowrap flex-shrink-0 ${
+            currentPath === item.href 
+              ? 'bg-[var(--primary)] text-white' 
+              : 'bg-gray-100 text-gray-700'
+          }`}
+          style="scroll-snap-align: start;"
+        >
+          {item.icon} {item.label}
+        </a>
+      ))}
+      <!-- Spacer na końcu żeby ostatni element był widoczny -->
+      <div class="w-4 flex-shrink-0"></div>
+    </div>
   </div>
+  
+  <script is:inline>
+    // Ukryj gradient gdy doscrollowano do końca
+    const nav = document.getElementById('mobile-nav');
+    const indicator = document.getElementById('scroll-indicator');
+    if (nav && indicator) {
+      const checkScroll = () => {
+        const isAtEnd = nav.scrollLeft + nav.clientWidth >= nav.scrollWidth - 10;
+        indicator.style.opacity = isAtEnd ? '0' : '1';
+      };
+      nav.addEventListener('scroll', checkScroll);
+      checkScroll();
+    }
+  </script>
   
   <!-- Main content -->
   <main class="max-w-7xl mx-auto px-4 py-6">
