@@ -102,7 +102,48 @@ export function initDatabase() {
       reservation_id INTEGER REFERENCES reservations(id),
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
+    
+    -- Tokeny do formularza uzupełniania danych
+    CREATE TABLE IF NOT EXISTS completion_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      token TEXT NOT NULL UNIQUE,
+      reservation_id INTEGER REFERENCES reservations(id) NOT NULL,
+      participant_id INTEGER REFERENCES participants(id) NOT NULL,
+      status TEXT DEFAULT 'pending',
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      expires_at TEXT NOT NULL,
+      used_at TEXT,
+      sent_via TEXT,
+      sent_at TEXT
+    );
+    
+    -- Historia certyfikatów ADR
+    CREATE TABLE IF NOT EXISTS adr_certificates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      participant_id INTEGER REFERENCES participants(id) NOT NULL,
+      certificate_number TEXT,
+      issue_date TEXT,
+      expiry_date TEXT NOT NULL,
+      classes TEXT NOT NULL,
+      is_first INTEGER DEFAULT 0,
+      course_id INTEGER REFERENCES courses(id),
+      status TEXT DEFAULT 'active',
+      reminder_6m_sent INTEGER DEFAULT 0,
+      reminder_3m_sent INTEGER DEFAULT 0,
+      reminder_1m_sent INTEGER DEFAULT 0,
+      notes TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      created_by TEXT
+    );
   `);
+  
+  // Dodaj brakujące kolumny do reservations (ALTER TABLE)
+  try {
+    sqlite.exec(`ALTER TABLE reservations ADD COLUMN data_completed INTEGER DEFAULT 0`);
+  } catch (e) { /* kolumna już istnieje */ }
+  try {
+    sqlite.exec(`ALTER TABLE reservations ADD COLUMN data_completed_at TEXT`);
+  } catch (e) { /* kolumna już istnieje */ }
   
   console.log('Database initialized at:', DB_PATH);
 }
