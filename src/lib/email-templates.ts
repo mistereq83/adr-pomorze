@@ -101,18 +101,6 @@ export function reservationConfirmed(
   course: CourseInfo,
   reservation: ReservationInfo
 ): string {
-  const paymentInfo = reservation.paymentMethod === 'transfer' 
-    ? `
-      <div class="info-box">
-        <h3 style="margin-top: 0;">💳 Dane do przelewu</h3>
-        <div class="info-row"><span class="info-label">Odbiorca:</span><span class="info-value">ADR Pomorze</span></div>
-        <div class="info-row"><span class="info-label">Nr konta:</span><span class="info-value">XX XXXX XXXX XXXX XXXX XXXX XXXX</span></div>
-        <div class="info-row"><span class="info-label">Tytuł:</span><span class="info-value">Szkolenie ADR - ${participant.firstName} ${participant.lastName}</span></div>
-        <div class="info-row"><span class="info-label">Kwota:</span><span class="info-value">${course.price || '---'} zł</span></div>
-      </div>
-    `
-    : '<p>Płatność gotówką w dniu szkolenia.</p>';
-
   return wrapTemplate(`
     <div class="header">
       <h1>✅ Rezerwacja potwierdzona!</h1>
@@ -128,8 +116,6 @@ export function reservationConfirmed(
         <div class="info-row"><span class="info-label">Miejsce:</span><span class="info-value">${course.location}</span></div>
         <div class="info-row"><span class="info-label">Nr rezerwacji:</span><span class="info-value">#${reservation.id}</span></div>
       </div>
-      
-      ${paymentInfo}
       
       <div class="highlight">
         <strong>📝 Co zabrać na szkolenie:</strong><br>
@@ -210,7 +196,6 @@ export function adminNewReservation(
         <h3 style="margin-top: 0;">📋 Szkolenie</h3>
         <div class="info-row"><span class="info-label">Typ kursu:</span><span class="info-value">${course.type}</span></div>
         <div class="info-row"><span class="info-label">Termin:</span><span class="info-value">${course.startDate} - ${course.endDate}</span></div>
-        <div class="info-row"><span class="info-label">Płatność:</span><span class="info-value">${reservation.paymentMethod === 'transfer' ? 'Przelew' : 'Gotówka'}</span></div>
         ${reservation.needsInvoice ? `<div class="info-row"><span class="info-label">Faktura:</span><span class="info-value">${reservation.invoiceCompany || 'TAK'}</span></div>` : ''}
       </div>
       

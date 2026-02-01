@@ -211,25 +211,9 @@ function getCourseTypeLabel(type: string) {
               </div>
             </div>
             
-            <!-- Płatność -->
+            <!-- Faktura -->
             <div class="border-t pt-6">
-              <h2 class="font-bold text-lg mb-4">Płatność</h2>
-              
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Preferowana forma płatności</label>
-                <div class="flex flex-wrap gap-4">
-                  <label class="flex items-center gap-2">
-                    <input type="radio" name="paymentMethod" value="przelew" checked />
-                    <span>Przelew</span>
-                  </label>
-                  <label class="flex items-center gap-2">
-                    <input type="radio" name="paymentMethod" value="gotowka" />
-                    <span>Gotówka</span>
-                  </label>
-                </div>
-              </div>
-              
-              <div class="mt-4 flex items-start gap-3">
+              <div class="flex items-start gap-3">
                 <input type="checkbox" name="needsInvoice" id="needsInvoice" class="mt-1" />
                 <label for="needsInvoice" class="text-sm text-gray-700">
                   Potrzebuję fakturę VAT
