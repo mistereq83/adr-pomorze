@@ -6,6 +6,7 @@ import { validateAndNormalizePhone } from '../../../lib/phone';
 import { findOrCreateParticipant } from '../../../lib/participants';
 import { sendEmailForEvent } from '../../../lib/email-service';
 import { sendSmsForEvent } from '../../../lib/sms';
+import { notifyNewReservation } from '../../../lib/sse';
 
 // GET /api/reservations - lista rezerwacji z joinami
 export const GET: APIRoute = async ({ url }) => {
@@ -112,6 +113,21 @@ export const POST: APIRoute = async ({ request }) => {
       smsResult = await sendSmsForEvent('reservation_submitted', result[0].id);
     } catch (smsError) {
       console.error('SMS send failed (non-blocking):', smsError);
+    }
+    
+    // Powiadom podłączone dashboardy przez SSE
+    try {
+      const participant = await db.select().from(participants).where(eq(participants.id, participantId)).get();
+      const course = data.courseId ? await db.select().from(courses).where(eq(courses.id, data.courseId)).get() : null;
+      
+      notifyNewReservation({
+        id: result[0].id,
+        participantName: participant ? `${participant.firstName} ${participant.lastName}` : 'Nieznany',
+        courseType: course?.courseType || 'Nieznany',
+        createdAt: result[0].createdAt || new Date().toISOString(),
+      });
+    } catch (sseError) {
+      console.error('SSE notification failed (non-blocking):', sseError);
     }
     
     return new Response(JSON.stringify({ ...result[0], emailResult, smsResult }), {
