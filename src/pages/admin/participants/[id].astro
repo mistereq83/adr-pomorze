@@ -1,7 +1,7 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { db } from '../../../db';
-import { participants, reservations, courses } from '../../../db/schema';
+import { participants, reservations, courses, adrCertificates } from '../../../db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { validateAndNormalizePhone } from '../../../lib/phone';
 
@@ -93,6 +93,16 @@ const participantReservations = await db.select({
   .leftJoin(courses, eq(reservations.courseId, courses.id))
   .where(eq(reservations.participantId, parseInt(id)))
   .orderBy(desc(reservations.createdAt));
+
+// Pobierz historię certyfikatów ADR
+const participantCertificates = await db.select({
+  certificate: adrCertificates,
+  course: courses,
+})
+  .from(adrCertificates)
+  .leftJoin(courses, eq(adrCertificates.courseId, courses.id))
+  .where(eq(adrCertificates.participantId, parseInt(id)))
+  .orderBy(desc(adrCertificates.expiryDate));
 
 // Sprawdź czy uprawnienia wygasają niedługo
 const today = new Date();
@@ -423,6 +433,56 @@ function getCourseTypeLabel(type: string | null) {
           )}
         </div>
 
+        <!-- Historia certyfikatów ADR -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold">🏆 Historia ADR</h2>
+            <button 
+              onclick="document.getElementById('addCertModal').showModal()"
+              class="text-xs bg-[var(--accent)] text-white px-2 py-1 rounded hover:bg-opacity-90"
+            >
+              + Dodaj
+            </button>
+          </div>
+          
+          {participantCertificates.length === 0 ? (
+            <p class="text-gray-500 text-sm">Brak wpisów. {participant.hasCurrentAdr ? 'Dodaj aktualne uprawnienia.' : 'To będą pierwsze uprawnienia.'}</p>
+          ) : (
+            <div class="space-y-3">
+              {participantCertificates.map((c) => (
+                <div 
+                  class={`p-3 rounded-lg border ${c.certificate.status === 'active' ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}
+                >
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="font-medium text-sm">{c.certificate.classes}</span>
+                    <span class={`px-2 py-0.5 rounded text-xs ${
+                      c.certificate.status === 'active' ? 'bg-green-100 text-green-800' : 
+                      c.certificate.status === 'renewed' ? 'bg-blue-100 text-blue-800' : 
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {c.certificate.status === 'active' ? 'Aktywny' : c.certificate.status === 'renewed' ? 'Odnowiony' : 'Wygasły'}
+                    </span>
+                  </div>
+                  <div class="text-xs text-gray-600">
+                    {c.certificate.isFirst && <span class="text-purple-600 font-medium">Pierwsze uprawnienia • </span>}
+                    Ważne do: <span class="font-mono">{formatDate(c.certificate.expiryDate)}</span>
+                  </div>
+                  {c.certificate.certificateNumber && (
+                    <div class="text-xs text-gray-500 mt-1">
+                      Nr: {c.certificate.certificateNumber}
+                    </div>
+                  )}
+                  {c.course && (
+                    <div class="text-xs text-gray-500 mt-1">
+                      Kurs u nas: {formatDate(c.course.startDate)}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <!-- Szybkie akcje -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <h2 class="text-lg font-semibold mb-4">⚡ Szybkie akcje</h2>
@@ -479,4 +539,125 @@ function getCourseTypeLabel(type: string | null) {
       </div>
     </div>
   </dialog>
+  <!-- Modal dodawania certyfikatu ADR -->
+  <dialog id="addCertModal" class="rounded-xl p-0 backdrop:bg-black/50 w-full max-w-md">
+    <div class="p-6">
+      <h3 class="text-lg font-bold text-gray-900 mb-4">Dodaj certyfikat ADR</h3>
+      <form id="certForm" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Zakres uprawnień *</label>
+          <select 
+            name="classes" 
+            required
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)]"
+          >
+            <option value="podstawowy">Podstawowy</option>
+            <option value="podstawowy,cysterny">Podstawowy + Cysterny</option>
+            <option value="cysterny">Cysterny (rozszerzenie)</option>
+            <option value="klasa1">Klasa 1 (materiały wybuchowe)</option>
+            <option value="klasa7">Klasa 7 (promieniotwórcze)</option>
+          </select>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Data wydania</label>
+            <input 
+              type="date" 
+              name="issueDate"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)]"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Data ważności *</label>
+            <input 
+              type="date" 
+              name="expiryDate"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)]"
+            />
+          </div>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Numer zaświadczenia</label>
+          <input 
+            type="text" 
+            name="certificateNumber"
+            placeholder="np. PL/123456/2024"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] font-mono"
+          />
+        </div>
+        
+        <div>
+          <label class="flex items-center gap-2">
+            <input 
+              type="checkbox" 
+              name="isFirst"
+              class="w-4 h-4 rounded border-gray-300 text-[var(--accent)]"
+            />
+            <span class="text-sm">To są pierwsze uprawnienia ADR tej osoby</span>
+          </label>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Notatki</label>
+          <textarea 
+            name="notes"
+            rows="2"
+            placeholder="Opcjonalne uwagi..."
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)]"
+          ></textarea>
+        </div>
+        
+        <div class="flex justify-end gap-2 pt-4 border-t">
+          <button 
+            type="button"
+            onclick="document.getElementById('addCertModal').close()"
+            class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+          >
+            Anuluj
+          </button>
+          <button type="submit" class="px-4 py-2 bg-[var(--accent)] text-white rounded-lg hover:bg-opacity-90">
+            Dodaj certyfikat
+          </button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+  
+  <script define:vars={{ participantId: participant.id }}>
+    document.getElementById('certForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const formData = new FormData(form);
+      
+      const data = {
+        classes: formData.get('classes'),
+        issueDate: formData.get('issueDate') || null,
+        expiryDate: formData.get('expiryDate'),
+        certificateNumber: formData.get('certificateNumber') || null,
+        isFirst: formData.get('isFirst') === 'on',
+        notes: formData.get('notes') || null,
+        createdBy: 'admin',
+      };
+      
+      try {
+        const response = await fetch(`/api/participants/${participantId}/certificates`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) {
+          throw new Error('Błąd dodawania');
+        }
+        
+        // Odśwież stronę
+        window.location.reload();
+      } catch (error) {
+        alert('Błąd: ' + error.message);
+      }
+    });
+  </script>
 </AdminLayout>

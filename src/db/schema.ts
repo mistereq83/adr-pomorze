@@ -105,7 +105,42 @@ export const smsLog = sqliteTable('sms_log', {
   createdAt: text('created_at').default('CURRENT_TIMESTAMP'),
 });
 
+// Historia certyfikatów/zaświadczeń ADR
+export const adrCertificates = sqliteTable('adr_certificates', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  participantId: integer('participant_id').references(() => participants.id).notNull(),
+  
+  // Dane zaświadczenia
+  certificateNumber: text('certificate_number'),        // Numer zaświadczenia ADR
+  issueDate: text('issue_date'),                        // Data wydania
+  expiryDate: text('expiry_date').notNull(),            // Data wygaśnięcia (5 lat od egzaminu)
+  
+  // Zakres uprawnień
+  classes: text('classes').notNull(),                   // np. "podstawowy", "podstawowy,cysterny", "klasa1"
+  
+  // Typ
+  isFirst: integer('is_first', { mode: 'boolean' }).default(false),  // Pierwsze uprawnienia?
+  
+  // Powiązanie z naszym kursem (jeśli zrobił u nas)
+  courseId: integer('course_id').references(() => courses.id),
+  
+  // Status
+  status: text('status').default('active'),             // 'active', 'expired', 'renewed'
+  
+  // Przypomnienia
+  reminder6mSent: integer('reminder_6m_sent', { mode: 'boolean' }).default(false),
+  reminder3mSent: integer('reminder_3m_sent', { mode: 'boolean' }).default(false),
+  reminder1mSent: integer('reminder_1m_sent', { mode: 'boolean' }).default(false),
+  
+  // Meta
+  notes: text('notes'),
+  createdAt: text('created_at').default('CURRENT_TIMESTAMP'),
+  createdBy: text('created_by'),                        // Kto dodał wpis (operator)
+});
+
 // Typy TypeScript
+export type AdrCertificate = typeof adrCertificates.$inferSelect;
+export type NewAdrCertificate = typeof adrCertificates.$inferInsert;
 export type Course = typeof courses.$inferSelect;
 export type NewCourse = typeof courses.$inferInsert;
 export type Participant = typeof participants.$inferSelect;
