@@ -69,13 +69,14 @@ if (Astro.request.method === 'POST' && ADMIN_PASSWORD) {
       // Sukces - wyczyść rate limit i ustaw cookie z tokenem
       clearRateLimit(clientIP);
       const sessionToken = generateSessionToken(ADMIN_PASSWORD);
+      const rememberMe = formData.get('remember') === 'on';
       
       Astro.cookies.set('admin_session', sessionToken, {
         path: '/',
         httpOnly: true,
         secure: import.meta.env.PROD,
         sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 7, // 7 dni
+        maxAge: rememberMe ? 60 * 60 * 24 * 30 : 60 * 60 * 24, // 30 dni lub 24h
       });
       return Astro.redirect('/admin');
     } else {
@@ -94,8 +95,16 @@ if (Astro.request.method === 'POST' && ADMIN_PASSWORD) {
 <html lang="pl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Panel Admin - Logowanie | ADR Pomorze</title>
+  
+  <!-- PWA Meta Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ADR Admin">
+  <meta name="theme-color" content="#1e3a5f">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.json">
 </head>
 <body class="min-h-screen bg-gray-100 flex items-center justify-center">
   <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
@@ -136,6 +145,18 @@ if (Astro.request.method === 'POST' && ADMIN_PASSWORD) {
             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
             placeholder="Wprowadź hasło..."
           />
+        </div>
+        
+        <div class="mb-6">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input 
+              type="checkbox" 
+              name="remember"
+              checked
+              class="w-4 h-4 rounded border-gray-300 text-[var(--accent)] focus:ring-[var(--accent)]"
+            />
+            <span class="text-sm text-gray-600">Zapamiętaj mnie (30 dni)</span>
+          </label>
         </div>
         
         <button type="submit" class="w-full btn-primary py-3">
