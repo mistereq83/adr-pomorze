@@ -24,6 +24,8 @@ RUN mkdir -p /app/data
 ENV HOST=0.0.0.0
 ENV PORT=4321
 ENV DATABASE_PATH=/app/data/adr.db
+ENV NODE_ENV=production
+ENV PUBLIC_URL=http://localhost:4321
 
 EXPOSE 4321
 

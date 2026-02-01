@@ -109,3 +109,12 @@ export function initDatabase() {
 
 // Wywołaj przy starcie
 initDatabase();
+
+// Inicjalizuj cron jobs (tylko w produkcji lub gdy wymuszono)
+if (process.env.NODE_ENV === 'production' || process.env.ENABLE_CRON === 'true') {
+  import('../lib/cron').then(({ initCronJobs }) => {
+    initCronJobs();
+  }).catch(err => {
+    console.error('[CRON] Failed to initialize:', err);
+  });
+}
