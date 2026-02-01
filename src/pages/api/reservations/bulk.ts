@@ -2,6 +2,8 @@ import type { APIRoute } from 'astro';
 import { db } from '../../../db';
 import { reservations } from '../../../db/schema';
 import { findOrCreateParticipant } from '../../../lib/participants';
+import { sendEmailForEvent } from '../../../lib/email-service';
+import { sendSmsForEvent, sendAdminNotificationSms } from '../../../lib/sms';
 
 // POST /api/reservations/bulk - rezerwacja na wiele szkoleń naraz
 export const POST: APIRoute = async ({ request }) => {
@@ -56,6 +58,18 @@ export const POST: APIRoute = async ({ request }) => {
       }).returning();
       
       createdReservations.push(reservation[0]);
+      
+      // Wyślij powiadomienia dla każdej rezerwacji
+      try {
+        // Email do klienta + adminów
+        await sendEmailForEvent('reservation_submitted', reservation[0].id);
+        // SMS do klienta
+        await sendSmsForEvent('reservation_submitted', reservation[0].id);
+        // SMS do admina
+        await sendAdminNotificationSms(reservation[0].id);
+      } catch (notifyError) {
+        console.error('Notification error (non-blocking):', notifyError);
+      }
     }
     
     return new Response(JSON.stringify({

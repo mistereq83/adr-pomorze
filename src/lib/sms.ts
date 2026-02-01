@@ -1,6 +1,6 @@
 // SMSAPI Integration for ADR Pomorze
 import { db } from '../db';
-import { smsTemplates, smsLog, participants, courses, reservations } from '../db/schema';
+import { smsTemplates, smsLog, participants, courses, reservations, settings } from '../db/schema';
 import { eq } from 'drizzle-orm';
 
 const SMSAPI_TOKEN = import.meta.env.SMSAPI_TOKEN || process.env.SMSAPI_TOKEN || '';
@@ -148,6 +148,77 @@ export async function sendSmsForEvent(
   return { ...result, sent: true };
 }
 
+// Wyślij SMS do admina przy nowej rezerwacji
+export async function sendAdminNotificationSms(reservationId: number): Promise<SmsResult & { sent: boolean }> {
+  // Pobierz numer telefonu admina z ustawień
+  const adminPhoneSetting = await db.select()
+    .from(settings)
+    .where(eq(settings.key, 'admin_phone'))
+    .get();
+  
+  const adminPhone = adminPhoneSetting?.value;
+  if (!adminPhone) {
+    return { success: false, sent: false, error: 'Admin phone not configured' };
+  }
+  
+  // Pobierz szablon
+  const template = await db.select()
+    .from(smsTemplates)
+    .where(eq(smsTemplates.event, 'admin_new_reservation'))
+    .get();
+
+  if (!template || !template.enabled) {
+    return { success: false, sent: false, error: 'Admin template not found or disabled' };
+  }
+
+  // Pobierz dane rezerwacji
+  const reservation = await db.select({
+    reservation: reservations,
+    participant: participants,
+    course: courses,
+  })
+    .from(reservations)
+    .leftJoin(participants, eq(reservations.participantId, participants.id))
+    .leftJoin(courses, eq(reservations.courseId, courses.id))
+    .where(eq(reservations.id, reservationId))
+    .get();
+
+  if (!reservation || !reservation.participant) {
+    return { success: false, sent: false, error: 'Reservation not found' };
+  }
+
+  const { participant, course } = reservation;
+
+  const variables: Record<string, string> = {
+    imie: participant.firstName,
+    nazwisko: participant.lastName,
+    telefon: participant.phone,
+    email: participant.email || '',
+    kurs: course?.courseType || '',
+    data: course?.startDate ? new Date(course.startDate).toLocaleDateString('pl-PL') : '',
+    lokalizacja: course?.location || '',
+  };
+
+  const message = parseTemplate(template.template, variables);
+  const result = await sendSms(adminPhone, message);
+
+  // Zapisz do logu
+  await db.insert(smsLog).values({
+    templateEvent: 'admin_new_reservation',
+    recipientPhone: adminPhone,
+    recipientName: 'Administrator',
+    message: message,
+    smsapiId: result.smsapiId || null,
+    status: result.success ? 'sent' : 'failed',
+    errorMessage: result.error || null,
+    cost: result.cost || null,
+    reservationId: reservationId,
+    createdAt: new Date().toISOString(),
+  });
+
+  return { ...result, sent: true };
+}
+
 // Inicjalizuj domyślne szablony
 export async function initDefaultTemplates() {
   const defaults = [
@@ -170,6 +241,11 @@ export async function initDefaultTemplates() {
       event: 'course_reminder',
       name: 'Przypomnienie o kursie',
       template: '{{imie}}, przypominamy: kurs ADR zaczyna się {{data}} o 8:00 w {{lokalizacja}}. ADR Pomorze',
+    },
+    {
+      event: 'admin_new_reservation',
+      name: 'Powiadomienie admina - nowe zgłoszenie',
+      template: 'Nowe zgłoszenie! {{imie}} {{nazwisko}} ({{telefon}}) - {{kurs}} {{data}}. Sprawdź panel.',
     },
   ];
 

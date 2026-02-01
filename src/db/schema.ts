@@ -162,7 +162,15 @@ export const adrCertificates = sqliteTable('adr_certificates', {
   createdBy: text('created_by'),                        // Kto dodał wpis (operator)
 });
 
+// Ustawienia systemowe (key-value)
+export const settings = sqliteTable('settings', {
+  key: text('key').primaryKey(),
+  value: text('value'),
+  updatedAt: text('updated_at'),
+});
+
 // Typy TypeScript
+export type Setting = typeof settings.$inferSelect;
 export type AdrCertificate = typeof adrCertificates.$inferSelect;
 export type NewAdrCertificate = typeof adrCertificates.$inferInsert;
 export type CompletionToken = typeof completionTokens.$inferSelect;
