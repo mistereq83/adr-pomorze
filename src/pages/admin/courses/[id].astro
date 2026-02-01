@@ -1,8 +1,8 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { db } from '../../../db';
-import { courses, reservations } from '../../../db/schema';
-import { eq, count, and, notInArray } from 'drizzle-orm';
+import { courses, reservations, participants, completionTokens } from '../../../db/schema';
+import { eq, count, and, notInArray, desc } from 'drizzle-orm';
 
 const { id } = Astro.params;
 
@@ -62,15 +62,43 @@ if (!course) {
   return Astro.redirect('/admin/courses');
 }
 
-// Policz rezerwacje
-const reservationCount = await db.select({ count: count() })
+// Pobierz rezerwacje z uczestnikami (bez anulowanych)
+const courseReservations = await db
+  .select({
+    reservation: reservations,
+    participant: participants,
+  })
   .from(reservations)
+  .leftJoin(participants, eq(reservations.participantId, participants.id))
   .where(
     and(
       eq(reservations.courseId, parseInt(id)),
       notInArray(reservations.status, ['cancelled', 'no_show'])
     )
   );
+
+// Pobierz ostatnie tokeny dla każdej rezerwacji
+const reservationIds = courseReservations.map(r => r.reservation.id);
+const tokens = reservationIds.length > 0 
+  ? await db
+      .select()
+      .from(completionTokens)
+      .where(eq(completionTokens.status, 'pending'))
+  : [];
+
+// Mapuj tokeny do rezerwacji
+const tokenMap = new Map<number, typeof tokens[0]>();
+tokens.forEach(t => {
+  const existing = tokenMap.get(t.reservationId);
+  if (!existing || new Date(t.createdAt!) > new Date(existing.createdAt!)) {
+    tokenMap.set(t.reservationId, t);
+  }
+});
+
+// Oblicz statystyki
+const totalParticipants = courseReservations.length;
+const completedData = courseReservations.filter(r => r.reservation.dataCompleted).length;
+const pendingData = totalParticipants - completedData;
 
 const courseTypes = [
   { value: 'podstawowy', label: 'Podstawowy', emoji: '📚' },
@@ -86,10 +114,35 @@ const statuses = [
   { value: 'completed', label: 'Zakończony', class: 'bg-gray-500 text-white' },
   { value: 'cancelled', label: 'Anulowany', class: 'bg-red-500 text-white' },
 ];
+
+const paymentLabels: Record<string, { label: string; class: string }> = {
+  'unpaid': { label: 'Nieopłacone', class: 'text-red-600' },
+  'partial': { label: 'Częściowo', class: 'text-yellow-600' },
+  'paid': { label: 'Opłacone', class: 'text-green-600' },
+};
+
+function formatDate(dateStr: string | null) {
+  if (!dateStr) return '-';
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) return 'dziś';
+  if (diffDays === 1) return 'wczoraj';
+  if (diffDays < 7) return `${diffDays}d temu`;
+  return date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+}
+
+function maskPhone(phone: string | null) {
+  if (!phone) return '-';
+  if (phone.length <= 6) return phone;
+  return phone.slice(0, 3) + '...' + phone.slice(-3);
+}
 ---
 
 <AdminLayout title="Edytuj kurs">
-  <div class="max-w-2xl mx-auto">
+  <div class="max-w-4xl mx-auto">
     <a href="/admin/courses" class="text-gray-500 hover:text-gray-700 text-sm mb-4 inline-flex items-center gap-1">
       ← Powrót do kursów
     </a>
@@ -100,151 +153,281 @@ const statuses = [
       </div>
     )}
     
-    <form method="POST" class="space-y-6">
-      <input type="hidden" name="action" value="update" />
-      
-      <!-- Typ kursu -->
-      <div class="bg-white rounded-xl shadow-sm p-6">
-        <h2 class="font-bold text-lg mb-4">Typ kursu</h2>
-        
-        <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
-          {courseTypes.map((type) => (
-            <label class="flex flex-col items-center p-3 border-2 border-gray-200 rounded-xl cursor-pointer transition-all hover:border-[var(--accent)] has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent)]/5">
-              <input 
-                type="radio" 
-                name="courseType" 
-                value={type.value}
-                checked={course.courseType === type.value}
-                required
-                class="sr-only"
-              />
-              <span class="text-2xl mb-1">{type.emoji}</span>
-              <span class="text-sm font-medium text-center">{type.label}</span>
-            </label>
-          ))}
-        </div>
-      </div>
+    <!-- Alert dla brakujących danych -->
+    <div id="actionMessage" class="mb-4 p-4 rounded-lg hidden"></div>
 
-      <!-- Termin -->
-      <div class="bg-white rounded-xl shadow-sm p-6">
-        <h2 class="font-bold text-lg mb-4">Termin</h2>
-        
-        <div class="grid grid-cols-2 gap-4 mb-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Od *</label>
-            <input 
-              type="date" 
-              name="startDate" 
-              value={course.startDate}
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
-            />
+    <div class="grid md:grid-cols-3 gap-6">
+      <!-- Kolumna lewa: Formularz edycji -->
+      <div class="md:col-span-2">
+        <form method="POST" class="space-y-6">
+          <input type="hidden" name="action" value="update" />
+          
+          <!-- Typ kursu -->
+          <div class="bg-white rounded-xl shadow-sm p-6">
+            <h2 class="font-bold text-lg mb-4">Typ kursu</h2>
+            
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {courseTypes.map((type) => (
+                <label class="flex flex-col items-center p-3 border-2 border-gray-200 rounded-xl cursor-pointer transition-all hover:border-[var(--accent)] has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent)]/5">
+                  <input 
+                    type="radio" 
+                    name="courseType" 
+                    value={type.value}
+                    checked={course.courseType === type.value}
+                    required
+                    class="sr-only"
+                  />
+                  <span class="text-2xl mb-1">{type.emoji}</span>
+                  <span class="text-sm font-medium text-center">{type.label}</span>
+                </label>
+              ))}
+            </div>
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Do *</label>
-            <input 
-              type="date" 
-              name="endDate" 
-              value={course.endDate}
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
-            />
-          </div>
-        </div>
-        
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Lokalizacja</label>
-          <input 
-            type="text" 
-            name="location" 
-            value={course.location || 'Gdańsk'}
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
-          />
-        </div>
-      </div>
 
-      <!-- Szczegóły -->
-      <div class="bg-white rounded-xl shadow-sm p-6">
-        <h2 class="font-bold text-lg mb-4">Szczegóły</h2>
-        
-        <div class="grid grid-cols-2 gap-4 mb-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Cena (zł)</label>
-            <input 
-              type="number" 
-              name="price" 
-              value={course.price || ''}
-              step="1"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent text-lg font-bold"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Max uczestników</label>
-            <input 
-              type="number" 
-              name="maxParticipants" 
-              value={course.maxParticipants || 15}
-              min="1"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
-            />
-          </div>
-        </div>
-        
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-          <div class="flex flex-wrap gap-2">
-            {statuses.map((s) => (
-              <label class={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition-all ${course.status === s.value ? s.class : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+          <!-- Termin -->
+          <div class="bg-white rounded-xl shadow-sm p-6">
+            <h2 class="font-bold text-lg mb-4">Termin</h2>
+            
+            <div class="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Od *</label>
                 <input 
-                  type="radio" 
-                  name="status" 
-                  value={s.value}
-                  checked={course.status === s.value}
-                  class="sr-only"
+                  type="date" 
+                  name="startDate" 
+                  value={course.startDate}
+                  required
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
                 />
-                <span class="font-medium">{s.label}</span>
-              </label>
-            ))}
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Do *</label>
+                <input 
+                  type="date" 
+                  name="endDate" 
+                  value={course.endDate}
+                  required
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+                />
+              </div>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Lokalizacja</label>
+              <input 
+                type="text" 
+                name="location" 
+                value={course.location || 'Gdańsk'}
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+              />
+            </div>
           </div>
-        </div>
-        
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Notatki</label>
-          <textarea 
-            name="notes" 
-            rows="2"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
-          >{course.notes || ''}</textarea>
-        </div>
+
+          <!-- Szczegóły -->
+          <div class="bg-white rounded-xl shadow-sm p-6">
+            <h2 class="font-bold text-lg mb-4">Szczegóły</h2>
+            
+            <div class="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Cena (zł)</label>
+                <input 
+                  type="number" 
+                  name="price" 
+                  value={course.price || ''}
+                  step="1"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent text-lg font-bold"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Max uczestników</label>
+                <input 
+                  type="number" 
+                  name="maxParticipants" 
+                  value={course.maxParticipants || 15}
+                  min="1"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+                />
+              </div>
+            </div>
+            
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+              <div class="flex flex-wrap gap-2">
+                {statuses.map((s) => (
+                  <label class={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition-all ${course.status === s.value ? s.class : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                    <input 
+                      type="radio" 
+                      name="status" 
+                      value={s.value}
+                      checked={course.status === s.value}
+                      class="sr-only"
+                    />
+                    <span class="font-medium">{s.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Notatki</label>
+              <textarea 
+                name="notes" 
+                rows="2"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+              >{course.notes || ''}</textarea>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex justify-between items-center">
+            <button 
+              type="button"
+              onclick="document.getElementById('deleteModal').showModal()"
+              class="text-red-600 hover:text-red-800 text-sm"
+            >
+              🗑️ Usuń kurs
+            </button>
+            <button type="submit" class="btn-primary py-3 px-8">
+              Zapisz zmiany
+            </button>
+          </div>
+        </form>
       </div>
 
-      <!-- Info -->
-      <div class="bg-gray-50 rounded-xl p-4 flex items-center justify-between">
-        <div class="text-sm text-gray-600">
-          <span class="font-medium">Zapisanych:</span> {reservationCount[0].count} / {course.maxParticipants}
+      <!-- Kolumna prawa: Statystyki -->
+      <div class="space-y-4">
+        <div class="bg-white rounded-xl shadow-sm p-4">
+          <h3 class="font-bold text-gray-900 mb-3">📊 Podsumowanie</h3>
+          <div class="space-y-2 text-sm">
+            <div class="flex justify-between">
+              <span class="text-gray-600">Zapisanych:</span>
+              <span class="font-bold">{totalParticipants} / {course.maxParticipants}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">Dane kompletne:</span>
+              <span class="font-bold text-green-600">{completedData}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">Brak danych:</span>
+              <span class="font-bold text-orange-600">{pendingData}</span>
+            </div>
+          </div>
         </div>
+
         <a 
           href={`/admin/reservations/new?courseId=${course.id}`}
-          class="text-[var(--accent)] hover:underline text-sm font-medium"
+          class="block w-full text-center bg-[var(--accent)] text-white py-3 px-4 rounded-xl font-medium hover:opacity-90 transition-opacity"
         >
           ➕ Dodaj uczestnika
         </a>
+
+        {pendingData > 0 && (
+          <button 
+            type="button"
+            onclick="sendToAllPending()"
+            class="w-full text-center bg-orange-500 text-white py-3 px-4 rounded-xl font-medium hover:bg-orange-600 transition-colors"
+          >
+            📤 Wyślij link do {pendingData} osób
+          </button>
+        )}
+      </div>
+    </div>
+
+    <!-- Lista uczestników -->
+    <div class="mt-8 bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+        <h2 class="font-bold text-lg">👥 Zapisani uczestnicy</h2>
+        <div class="flex items-center gap-2">
+          <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+            <input 
+              type="checkbox" 
+              id="filterPending" 
+              class="rounded border-gray-300 text-[var(--accent)] focus:ring-[var(--accent)]"
+              onchange="filterParticipants()"
+            />
+            Tylko bez danych
+          </label>
+        </div>
       </div>
 
-      <!-- Actions -->
-      <div class="flex justify-between items-center">
-        <button 
-          type="button"
-          onclick="document.getElementById('deleteModal').showModal()"
-          class="text-red-600 hover:text-red-800 text-sm"
-        >
-          🗑️ Usuń kurs
-        </button>
-        <button type="submit" class="btn-primary py-3 px-8">
-          Zapisz zmiany
-        </button>
-      </div>
-    </form>
+      {courseReservations.length === 0 ? (
+        <div class="p-8 text-center text-gray-500">
+          <div class="text-4xl mb-2">📭</div>
+          <p>Brak zapisanych uczestników</p>
+        </div>
+      ) : (
+        <div class="divide-y divide-gray-100" id="participantsList">
+          {courseReservations.map(({ reservation, participant }) => {
+            const token = tokenMap.get(reservation.id);
+            const hasData = reservation.dataCompleted;
+            const lastSent = token?.sentAt;
+            const payment = paymentLabels[reservation.paymentStatus || 'unpaid'];
+            
+            return (
+              <div 
+                class="p-4 hover:bg-gray-50 transition-colors participant-row"
+                data-has-data={hasData ? 'true' : 'false'}
+                data-reservation-id={reservation.id}
+              >
+                <div class="flex items-start justify-between gap-4">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                      <a 
+                        href={`/admin/participants/${participant?.id}`}
+                        class="font-medium text-gray-900 hover:text-[var(--accent)] truncate"
+                      >
+                        {participant?.firstName} {participant?.lastName}
+                      </a>
+                      {hasData ? (
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          ✅ Kompletne
+                        </span>
+                      ) : (
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                          ⚠️ Brak danych
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div class="flex items-center gap-4 text-sm text-gray-500">
+                      <span title={participant?.phone || ''}>📱 {maskPhone(participant?.phone || null)}</span>
+                      {participant?.email && (
+                        <span class="truncate max-w-[150px]" title={participant.email}>📧 {participant.email}</span>
+                      )}
+                      <span class={payment.class}>{payment.label}</span>
+                    </div>
+                    
+                    {!hasData && lastSent && (
+                      <div class="mt-1 text-xs text-gray-400">
+                        📤 Link wysłany {formatDate(lastSent)}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div class="flex items-center gap-2 shrink-0">
+                    {!hasData && (
+                      <button
+                        type="button"
+                        onclick={`sendLink(${reservation.id}, '${participant?.firstName}')`}
+                        class="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-orange-600 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors"
+                        title="Wyślij link do uzupełnienia danych"
+                      >
+                        {lastSent ? '🔄 Ponów' : '📤 Wyślij'}
+                      </button>
+                    )}
+                    <a
+                      href={`/admin/reservations/${reservation.id}`}
+                      class="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                      Szczegóły →
+                    </a>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
   </div>
 
   <!-- Delete Modal -->
@@ -270,4 +453,130 @@ const statuses = [
       </div>
     </div>
   </dialog>
+
+  <!-- Send Link Modal -->
+  <dialog id="sendLinkModal" class="rounded-xl p-0 backdrop:bg-black/50">
+    <div class="p-6 max-w-md">
+      <h3 class="text-lg font-bold text-gray-900 mb-2">Wyślij link</h3>
+      <p class="text-gray-600 mb-4" id="sendLinkMessage">
+        Wyślij link do uzupełnienia danych
+      </p>
+      
+      <div class="space-y-2 mb-4">
+        <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent)]/5">
+          <input type="radio" name="sendVia" value="sms" checked class="text-[var(--accent)]" />
+          <span>📱 SMS</span>
+        </label>
+        <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent)]/5">
+          <input type="radio" name="sendVia" value="email" class="text-[var(--accent)]" />
+          <span>📧 Email</span>
+        </label>
+        <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent)]/5">
+          <input type="radio" name="sendVia" value="both" class="text-[var(--accent)]" />
+          <span>📱📧 Oba</span>
+        </label>
+      </div>
+      
+      <div class="flex justify-end gap-2">
+        <button 
+          onclick="document.getElementById('sendLinkModal').close()"
+          class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+        >
+          Anuluj
+        </button>
+        <button 
+          type="button"
+          onclick="confirmSendLink()"
+          class="px-4 py-2 bg-[var(--accent)] text-white rounded-lg hover:opacity-90"
+          id="confirmSendBtn"
+        >
+          Wyślij
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <script is:inline define:vars={{ pendingReservationIds: courseReservations.filter(r => !r.reservation.dataCompleted).map(r => r.reservation.id) }}>
+    let currentReservationId = null;
+    
+    function showMessage(text, isError = false) {
+      const el = document.getElementById('actionMessage');
+      el.textContent = text;
+      el.className = `mb-4 p-4 rounded-lg ${isError ? 'bg-red-50 border border-red-200 text-red-800' : 'bg-green-50 border border-green-200 text-green-800'}`;
+      el.classList.remove('hidden');
+      setTimeout(() => el.classList.add('hidden'), 5000);
+    }
+    
+    function sendLink(reservationId, firstName) {
+      currentReservationId = reservationId;
+      document.getElementById('sendLinkMessage').textContent = `Wyślij link do ${firstName}`;
+      document.getElementById('sendLinkModal').showModal();
+    }
+    
+    async function confirmSendLink() {
+      const sendVia = document.querySelector('input[name="sendVia"]:checked').value;
+      const btn = document.getElementById('confirmSendBtn');
+      btn.textContent = 'Wysyłam...';
+      btn.disabled = true;
+      
+      try {
+        const res = await fetch(`/api/reservations/${currentReservationId}/send-completion-link`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sendVia })
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+          showMessage(`✅ Link wysłany${data.sent.sms ? ' SMS' : ''}${data.sent.email ? ' email' : ''}`);
+          document.getElementById('sendLinkModal').close();
+          // Odśwież stronę po 1s
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          showMessage(`❌ ${data.error}`, true);
+        }
+      } catch (e) {
+        showMessage('❌ Błąd połączenia', true);
+      } finally {
+        btn.textContent = 'Wyślij';
+        btn.disabled = false;
+      }
+    }
+    
+    async function sendToAllPending() {
+      if (!confirm(`Wysłać SMS do ${pendingReservationIds.length} osób bez kompletnych danych?`)) {
+        return;
+      }
+      
+      let sent = 0;
+      let errors = 0;
+      
+      for (const id of pendingReservationIds) {
+        try {
+          const res = await fetch(`/api/reservations/${id}/send-completion-link`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sendVia: 'sms' })
+          });
+          const data = await res.json();
+          if (data.success && data.sent.sms) sent++;
+          else errors++;
+        } catch {
+          errors++;
+        }
+      }
+      
+      showMessage(`📤 Wysłano: ${sent}, błędy: ${errors}`, errors > 0);
+      if (sent > 0) setTimeout(() => location.reload(), 2000);
+    }
+    
+    function filterParticipants() {
+      const showOnlyPending = document.getElementById('filterPending').checked;
+      document.querySelectorAll('.participant-row').forEach(row => {
+        const hasData = row.dataset.hasData === 'true';
+        row.style.display = showOnlyPending && hasData ? 'none' : '';
+      });
+    }
+  </script>
 </AdminLayout>
