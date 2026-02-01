@@ -135,6 +135,13 @@ export function initDatabase() {
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       created_by TEXT
     );
+    
+    -- Ustawienia systemowe (key-value)
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT,
+      updated_at TEXT
+    );
   `);
   
   // Dodaj brakujące kolumny do reservations (ALTER TABLE)
