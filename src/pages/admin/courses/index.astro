@@ -73,7 +73,10 @@ function formatDateRange(start: string, end: string) {
         const isFull = course.reservationCount >= (course.maxParticipants || 15);
         
         return (
-          <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+          <a 
+            href={`/admin/courses/view/${course.id}`}
+            class="block bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md hover:border-gray-200 transition-all cursor-pointer"
+          >
             <div class="flex items-start justify-between gap-3 mb-3">
               <div class="flex items-center gap-2">
                 <span class="text-2xl">{typeStyle.emoji}</span>
@@ -95,7 +98,7 @@ function formatDateRange(start: string, end: string) {
               {course.price && <span class="font-bold text-[var(--accent)]">{course.price} zł</span>}
             </div>
             
-            <div class="flex gap-2 pt-3 border-t">
+            <div class="flex gap-2 pt-3 border-t" onclick="event.stopPropagation()">
               <a 
                 href={`/admin/courses/${course.id}`}
                 class="flex-1 text-center py-2 px-3 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
@@ -106,10 +109,10 @@ function formatDateRange(start: string, end: string) {
                 href={`/admin/reservations/new?courseId=${course.id}`}
                 class="flex-1 text-center py-2 px-3 bg-[var(--accent)]/10 text-[var(--accent)] rounded-lg text-sm font-medium hover:bg-[var(--accent)]/20 transition-colors"
               >
-                ➕ Dodaj uczestnika
+                ➕ Uczestnik
               </a>
             </div>
-          </div>
+          </a>
         );
       })
     )}
@@ -142,7 +145,10 @@ function formatDateRange(start: string, end: string) {
             const statusBadge = getStatusBadge(course.status);
             
             return (
-              <tr class="hover:bg-gray-50">
+              <tr 
+                class="hover:bg-gray-50 cursor-pointer transition-colors"
+                onclick={`window.location.href='/admin/courses/view/${course.id}'`}
+              >
                 <td class="p-4">
                   <div class="font-medium">{formatDateRange(course.startDate, course.endDate)}</div>
                 </td>
@@ -163,10 +169,10 @@ function formatDateRange(start: string, end: string) {
                     {statusBadge.label}
                   </span>
                 </td>
-                <td class="p-4">
+                <td class="p-4" onclick="event.stopPropagation()">
                   <div class="flex items-center gap-3">
                     <a href={`/admin/courses/${course.id}`} class="text-[var(--accent)] hover:underline text-sm font-medium">
-                      Edytuj
+                      ✏️ Edytuj
                     </a>
                     <a href={`/admin/reservations/new?courseId=${course.id}`} class="text-blue-600 hover:underline text-sm">
                       + Uczestnik

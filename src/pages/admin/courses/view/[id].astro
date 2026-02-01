@@ -1,0 +1,438 @@
+---
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import { db } from '../../../../db';
+import { courses, reservations, participants, completionTokens } from '../../../../db/schema';
+import { eq, count, and, notInArray } from 'drizzle-orm';
+
+const { id } = Astro.params;
+
+if (!id) {
+  return Astro.redirect('/admin/courses');
+}
+
+const course = await db.select()
+  .from(courses)
+  .where(eq(courses.id, parseInt(id)))
+  .get();
+
+if (!course) {
+  return Astro.redirect('/admin/courses');
+}
+
+// Pobierz rezerwacje z uczestnikami (bez anulowanych)
+const courseReservations = await db
+  .select({
+    reservation: reservations,
+    participant: participants,
+  })
+  .from(reservations)
+  .leftJoin(participants, eq(reservations.participantId, participants.id))
+  .where(
+    and(
+      eq(reservations.courseId, parseInt(id)),
+      notInArray(reservations.status, ['cancelled', 'no_show'])
+    )
+  );
+
+// Pobierz tokeny dla rezerwacji
+const reservationIds = courseReservations.map(r => r.reservation.id);
+const tokens = reservationIds.length > 0 
+  ? await db
+      .select()
+      .from(completionTokens)
+      .where(eq(completionTokens.status, 'pending'))
+  : [];
+
+const tokenMap = new Map<number, typeof tokens[0]>();
+tokens.forEach(t => {
+  const existing = tokenMap.get(t.reservationId);
+  if (!existing || new Date(t.createdAt!) > new Date(existing.createdAt!)) {
+    tokenMap.set(t.reservationId, t);
+  }
+});
+
+// Statystyki
+const totalParticipants = courseReservations.length;
+const completedData = courseReservations.filter(r => r.reservation.dataCompleted).length;
+const pendingData = totalParticipants - completedData;
+const paidCount = courseReservations.filter(r => r.reservation.paymentStatus === 'paid').length;
+
+function getCourseTypeStyle(type: string) {
+  const styles: Record<string, { bg: string; emoji: string; label: string }> = {
+    'podstawowy': { bg: 'bg-blue-100 text-blue-800', emoji: '📚', label: 'Podstawowy' },
+    'cysterny': { bg: 'bg-orange-100 text-orange-800', emoji: '🛢️', label: 'Cysterny' },
+    'klasa1': { bg: 'bg-purple-100 text-purple-800', emoji: '💥', label: 'Klasa 1' },
+    'klasa7': { bg: 'bg-yellow-100 text-yellow-800', emoji: '☢️', label: 'Klasa 7' },
+    'odnowienie': { bg: 'bg-green-100 text-green-800', emoji: '🔄', label: 'Odnowienie' },
+  };
+  return styles[type] || { bg: 'bg-gray-100 text-gray-800', emoji: '📋', label: type };
+}
+
+function getStatusBadge(status: string | null) {
+  const badges: Record<string, { class: string; label: string; emoji: string }> = {
+    open: { class: 'bg-green-100 text-green-800', label: 'Otwarty', emoji: '✓' },
+    full: { class: 'bg-yellow-100 text-yellow-800', label: 'Pełny', emoji: '🔒' },
+    completed: { class: 'bg-gray-100 text-gray-800', label: 'Zakończony', emoji: '✔' },
+    cancelled: { class: 'bg-red-100 text-red-800', label: 'Anulowany', emoji: '✕' },
+  };
+  return badges[status || 'open'] || badges.open;
+}
+
+function formatDateRange(start: string, end: string) {
+  const s = new Date(start);
+  const e = new Date(end);
+  const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', year: 'numeric' };
+  return `${s.toLocaleDateString('pl-PL', options)} - ${e.toLocaleDateString('pl-PL', options)}`;
+}
+
+function formatDate(dateStr: string | null) {
+  if (!dateStr) return '-';
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) return 'dziś';
+  if (diffDays === 1) return 'wczoraj';
+  if (diffDays < 7) return `${diffDays}d temu`;
+  return date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+}
+
+const typeStyle = getCourseTypeStyle(course.courseType || '');
+const statusBadge = getStatusBadge(course.status);
+
+const paymentLabels: Record<string, { label: string; class: string }> = {
+  'unpaid': { label: 'Nieopłacone', class: 'text-red-600' },
+  'partial': { label: 'Częściowo', class: 'text-yellow-600' },
+  'paid': { label: 'Opłacone', class: 'text-green-600' },
+};
+---
+
+<AdminLayout title={`${typeStyle.emoji} ${typeStyle.label} - podgląd`}>
+  <div class="max-w-4xl mx-auto">
+    <!-- Breadcrumb -->
+    <div class="flex items-center justify-between mb-6">
+      <a href="/admin/courses" class="text-gray-500 hover:text-gray-700 text-sm inline-flex items-center gap-1">
+        ← Powrót do kursów
+      </a>
+      <a 
+        href={`/admin/courses/${course.id}`}
+        class="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+      >
+        ✏️ Edytuj kurs
+      </a>
+    </div>
+
+    <!-- Alert dla akcji -->
+    <div id="actionMessage" class="mb-4 p-4 rounded-lg hidden"></div>
+
+    <!-- Nagłówek kursu -->
+    <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+      <div class="flex items-start justify-between gap-4 mb-4">
+        <div class="flex items-center gap-3">
+          <span class="text-4xl">{typeStyle.emoji}</span>
+          <div>
+            <h1 class="text-2xl font-bold text-[var(--primary)]">{typeStyle.label}</h1>
+            <p class="text-gray-600">{formatDateRange(course.startDate, course.endDate)}</p>
+          </div>
+        </div>
+        <span class={`px-3 py-1.5 rounded-lg text-sm font-medium ${statusBadge.class}`}>
+          {statusBadge.emoji} {statusBadge.label}
+        </span>
+      </div>
+
+      <!-- Szczegóły -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
+        <div>
+          <span class="text-sm text-gray-500 block">📍 Lokalizacja</span>
+          <span class="font-medium">{course.location || 'Gdańsk'}</span>
+        </div>
+        <div>
+          <span class="text-sm text-gray-500 block">💰 Cena</span>
+          <span class="font-bold text-lg">{course.price ? `${course.price} zł` : '-'}</span>
+        </div>
+        <div>
+          <span class="text-sm text-gray-500 block">👥 Zapisanych</span>
+          <span class={`font-bold text-lg ${totalParticipants >= (course.maxParticipants || 15) ? 'text-red-600' : ''}`}>
+            {totalParticipants} / {course.maxParticipants}
+          </span>
+        </div>
+        <div>
+          <span class="text-sm text-gray-500 block">💳 Opłacone</span>
+          <span class="font-bold text-lg text-green-600">{paidCount} / {totalParticipants}</span>
+        </div>
+      </div>
+
+      {course.notes && (
+        <div class="mt-4 pt-4 border-t">
+          <span class="text-sm text-gray-500 block mb-1">📝 Notatki</span>
+          <p class="text-gray-700">{course.notes}</p>
+        </div>
+      )}
+    </div>
+
+    <!-- Karty statystyk i akcji -->
+    <div class="grid md:grid-cols-3 gap-4 mb-6">
+      <div class="bg-white rounded-xl shadow-sm p-4">
+        <div class="flex items-center justify-between">
+          <span class="text-gray-600">✅ Dane kompletne</span>
+          <span class="text-2xl font-bold text-green-600">{completedData}</span>
+        </div>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm p-4">
+        <div class="flex items-center justify-between">
+          <span class="text-gray-600">⚠️ Brak danych</span>
+          <span class="text-2xl font-bold text-orange-600">{pendingData}</span>
+        </div>
+      </div>
+      <a 
+        href={`/admin/reservations/new?courseId=${course.id}`}
+        class="bg-[var(--accent)] text-white rounded-xl p-4 flex items-center justify-center gap-2 font-medium hover:opacity-90 transition-opacity"
+      >
+        ➕ Dodaj uczestnika
+      </a>
+    </div>
+
+    <!-- Akcje masowe -->
+    {pendingData > 0 && (
+      <div class="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-6">
+        <div class="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <span class="font-medium text-orange-800">📤 Wyślij przypomnienia</span>
+            <p class="text-sm text-orange-600">{pendingData} osób nie uzupełniło jeszcze danych</p>
+          </div>
+          <button 
+            type="button"
+            onclick="sendToAllPending()"
+            class="px-4 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors"
+          >
+            Wyślij SMS do wszystkich
+          </button>
+        </div>
+      </div>
+    )}
+
+    <!-- Lista uczestników -->
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+        <h2 class="font-bold text-lg">👥 Uczestnicy kursu</h2>
+        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+          <input 
+            type="checkbox" 
+            id="filterPending" 
+            class="rounded border-gray-300 text-[var(--accent)] focus:ring-[var(--accent)]"
+            onchange="filterParticipants()"
+          />
+          Tylko bez danych
+        </label>
+      </div>
+
+      {courseReservations.length === 0 ? (
+        <div class="p-8 text-center text-gray-500">
+          <div class="text-4xl mb-2">📭</div>
+          <p>Brak zapisanych uczestników</p>
+          <a href={`/admin/reservations/new?courseId=${course.id}`} class="text-[var(--accent)] hover:underline mt-2 inline-block">
+            Dodaj pierwszego uczestnika →
+          </a>
+        </div>
+      ) : (
+        <div class="divide-y divide-gray-100" id="participantsList">
+          {courseReservations.map(({ reservation, participant }) => {
+            const token = tokenMap.get(reservation.id);
+            const hasData = reservation.dataCompleted;
+            const lastSent = token?.sentAt;
+            const payment = paymentLabels[reservation.paymentStatus || 'unpaid'];
+            
+            return (
+              <div 
+                class="p-4 hover:bg-gray-50 transition-colors participant-row"
+                data-has-data={hasData ? 'true' : 'false'}
+                data-reservation-id={reservation.id}
+              >
+                <div class="flex items-start justify-between gap-4">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                      <a 
+                        href={`/admin/participants/${participant?.id}`}
+                        class="font-medium text-gray-900 hover:text-[var(--accent)] truncate"
+                      >
+                        {participant?.firstName} {participant?.lastName}
+                      </a>
+                      {hasData ? (
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          ✅ Kompletne
+                        </span>
+                      ) : (
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                          ⚠️ Brak danych
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div class="flex items-center gap-4 text-sm text-gray-500">
+                      {participant?.phone && <span>📱 {participant.phone}</span>}
+                      {participant?.email && (
+                        <span class="truncate max-w-[200px]" title={participant.email}>📧 {participant.email}</span>
+                      )}
+                      <span class={payment.class}>{payment.label}</span>
+                    </div>
+                    
+                    {!hasData && lastSent && (
+                      <div class="mt-1 text-xs text-gray-400">
+                        📤 Link wysłany {formatDate(lastSent)}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div class="flex items-center gap-2 shrink-0">
+                    {!hasData && (
+                      <button
+                        type="button"
+                        onclick={`sendLink(${reservation.id}, '${participant?.firstName}')`}
+                        class="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-orange-600 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors"
+                        title="Wyślij link do uzupełnienia danych"
+                      >
+                        {lastSent ? '🔄 Ponów' : '📤 Wyślij'}
+                      </button>
+                    )}
+                    <a
+                      href={`/admin/reservations/${reservation.id}`}
+                      class="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                      Szczegóły →
+                    </a>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  </div>
+
+  <!-- Send Link Modal -->
+  <dialog id="sendLinkModal" class="rounded-xl p-0 backdrop:bg-black/50">
+    <div class="p-6 max-w-md">
+      <h3 class="text-lg font-bold text-gray-900 mb-2">Wyślij link</h3>
+      <p class="text-gray-600 mb-4" id="sendLinkMessage">
+        Wyślij link do uzupełnienia danych
+      </p>
+      
+      <div class="space-y-2 mb-4">
+        <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent)]/5">
+          <input type="radio" name="sendVia" value="sms" checked class="text-[var(--accent)]" />
+          <span>📱 SMS</span>
+        </label>
+        <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent)]/5">
+          <input type="radio" name="sendVia" value="email" class="text-[var(--accent)]" />
+          <span>📧 Email</span>
+        </label>
+        <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent)]/5">
+          <input type="radio" name="sendVia" value="both" class="text-[var(--accent)]" />
+          <span>📱📧 Oba</span>
+        </label>
+      </div>
+      
+      <div class="flex justify-end gap-2">
+        <button 
+          onclick="document.getElementById('sendLinkModal').close()"
+          class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+        >
+          Anuluj
+        </button>
+        <button 
+          type="button"
+          onclick="confirmSendLink()"
+          class="px-4 py-2 bg-[var(--accent)] text-white rounded-lg hover:opacity-90"
+          id="confirmSendBtn"
+        >
+          Wyślij
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <script is:inline define:vars={{ pendingReservationIds: courseReservations.filter(r => !r.reservation.dataCompleted).map(r => r.reservation.id) }}>
+    let currentReservationId = null;
+    
+    function showMessage(text, isError = false) {
+      const el = document.getElementById('actionMessage');
+      el.textContent = text;
+      el.className = `mb-4 p-4 rounded-lg ${isError ? 'bg-red-50 border border-red-200 text-red-800' : 'bg-green-50 border border-green-200 text-green-800'}`;
+      el.classList.remove('hidden');
+      setTimeout(() => el.classList.add('hidden'), 5000);
+    }
+    
+    function sendLink(reservationId, firstName) {
+      currentReservationId = reservationId;
+      document.getElementById('sendLinkMessage').textContent = `Wyślij link do ${firstName}`;
+      document.getElementById('sendLinkModal').showModal();
+    }
+    
+    async function confirmSendLink() {
+      const sendVia = document.querySelector('input[name="sendVia"]:checked').value;
+      const btn = document.getElementById('confirmSendBtn');
+      btn.textContent = 'Wysyłam...';
+      btn.disabled = true;
+      
+      try {
+        const res = await fetch(`/api/reservations/${currentReservationId}/send-completion-link`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sendVia })
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+          showMessage(`✅ Link wysłany${data.sent.sms ? ' SMS' : ''}${data.sent.email ? ' email' : ''}`);
+          document.getElementById('sendLinkModal').close();
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          showMessage(`❌ ${data.error}`, true);
+        }
+      } catch (e) {
+        showMessage('❌ Błąd połączenia', true);
+      } finally {
+        btn.textContent = 'Wyślij';
+        btn.disabled = false;
+      }
+    }
+    
+    async function sendToAllPending() {
+      if (!confirm(`Wysłać SMS do ${pendingReservationIds.length} osób bez kompletnych danych?`)) {
+        return;
+      }
+      
+      let sent = 0;
+      let errors = 0;
+      
+      for (const id of pendingReservationIds) {
+        try {
+          const res = await fetch(`/api/reservations/${id}/send-completion-link`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sendVia: 'sms' })
+          });
+          const data = await res.json();
+          if (data.success && data.sent.sms) sent++;
+          else errors++;
+        } catch {
+          errors++;
+        }
+      }
+      
+      showMessage(`📤 Wysłano: ${sent}, błędy: ${errors}`, errors > 0);
+      if (sent > 0) setTimeout(() => location.reload(), 2000);
+    }
+    
+    function filterParticipants() {
+      const showOnlyPending = document.getElementById('filterPending').checked;
+      document.querySelectorAll('.participant-row').forEach(row => {
+        const hasData = row.dataset.hasData === 'true';
+        row.style.display = showOnlyPending && hasData ? 'none' : '';
+      });
+    }
+  </script>
+</AdminLayout>
