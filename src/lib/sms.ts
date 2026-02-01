@@ -152,6 +152,11 @@ export async function sendSmsForEvent(
 export async function initDefaultTemplates() {
   const defaults = [
     {
+      event: 'reservation_submitted',
+      name: 'Nowe zgłoszenie',
+      template: 'Cześć {{imie}}! Dziękujemy za zgłoszenie na kurs ADR ({{data}}). Potwierdzimy rezerwację wkrótce. ADR Pomorze',
+    },
+    {
       event: 'reservation_confirmed',
       name: 'Potwierdzenie rezerwacji',
       template: 'Cześć {{imie}}! Twoja rezerwacja na kurs ADR ({{data}}) została potwierdzona. Czekamy na Ciebie! ADR Pomorze',

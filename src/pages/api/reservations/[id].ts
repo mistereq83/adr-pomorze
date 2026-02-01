@@ -67,20 +67,18 @@ export const PUT: APIRoute = async ({ params, request }) => {
     let emailResult = null;
     if (data.status && data.status !== previousStatus) {
       if (data.status === 'confirmed') {
+        // Potwierdzona → SMS + Email
         smsResult = await sendSmsForEvent('reservation_confirmed', id);
         try {
           emailResult = await sendEmailForEvent('reservation_confirmed', id);
         } catch (e) { console.error('Email error:', e); }
       } else if (data.status === 'paid') {
+        // Opłacona → SMS + Email
         smsResult = await sendSmsForEvent('reservation_paid', id);
+        try {
+          emailResult = await sendEmailForEvent('reservation_paid', id);
+        } catch (e) { console.error('Email error:', e); }
       }
-    }
-    
-    // Email przy zmianie statusu płatności na "paid"
-    if (data.paymentStatus === 'paid' && currentReservation?.paymentStatus !== 'paid') {
-      try {
-        emailResult = await sendEmailForEvent('reservation_paid', id);
-      } catch (e) { console.error('Email error:', e); }
     }
     
     return new Response(JSON.stringify({ ...result[0], smsResult, emailResult }), {
