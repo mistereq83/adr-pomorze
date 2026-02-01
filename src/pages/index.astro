@@ -365,91 +365,98 @@ const nextCourses = courses.slice(0, 3);
   <!-- Registration Modal -->
   <div id="registration-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] hidden">
     <div class="min-h-screen flex items-center justify-center p-4">
-      <div class="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div class="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
-          <h3 class="text-xl font-bold text-[var(--primary)]">Zapisz się na szkolenia</h3>
-          <button id="modal-close" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+      <div class="bg-white rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-4 py-3 flex items-center justify-between">
+          <h3 class="text-lg font-bold text-[var(--primary)]">Zapisz się</h3>
+          <button id="modal-close" class="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
         
-        <div class="p-6">
+        <div class="p-4">
           <!-- Selected courses summary -->
-          <div class="mb-6">
-            <h4 class="text-sm font-semibold text-gray-500 mb-3">WYBRANE SZKOLENIA</h4>
-            <div id="modal-courses" class="space-y-2">
+          <div class="mb-4">
+            <div id="modal-courses" class="space-y-1.5 text-sm">
               <!-- Filled by JS -->
             </div>
-            <div class="border-t mt-3 pt-3 flex justify-between font-bold">
+            <div class="border-t mt-2 pt-2 flex justify-between font-bold text-sm">
               <span>Razem:</span>
               <span id="modal-total" class="text-[var(--accent)]">0 zł</span>
             </div>
           </div>
           
-          <!-- Contact form -->
-          <form id="registration-form" class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Imię i nazwisko *</label>
-              <input 
-                type="text" 
-                name="name" 
-                id="input-name"
-                required
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition-colors"
-                placeholder="Jan Kowalski"
-              />
-              <p id="error-name" class="hidden mt-1 text-sm text-red-600 flex items-center gap-1">
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
-                <span></span>
-              </p>
+          <!-- Contact form - compact -->
+          <form id="registration-form" class="space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Imię i nazwisko *</label>
+                <input 
+                  type="text" 
+                  name="name" 
+                  id="input-name"
+                  required
+                  class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition-colors"
+                  placeholder="Jan Kowalski"
+                />
+                <p id="error-name" class="hidden mt-1 text-xs text-red-600 flex items-center gap-1">
+                  <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                  <span></span>
+                </p>
+              </div>
+              
+              <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Telefon *</label>
+                <input 
+                  type="tel" 
+                  name="phone" 
+                  id="input-phone"
+                  required
+                  class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition-colors"
+                  placeholder="502 611 639"
+                />
+                <p id="error-phone" class="hidden mt-1 text-xs text-red-600 flex items-center gap-1">
+                  <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                  <span></span>
+                </p>
+              </div>
             </div>
             
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Telefon *</label>
-              <input 
-                type="tel" 
-                name="phone" 
-                id="input-phone"
-                required
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition-colors"
-                placeholder="502 611 639"
-              />
-              <p id="error-phone" class="hidden mt-1 text-sm text-red-600 flex items-center gap-1">
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
-                <span></span>
-              </p>
-            </div>
-            
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <label class="block text-xs font-medium text-gray-700 mb-1">Email *</label>
               <input 
                 type="email" 
                 name="email"
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+                id="input-email"
+                required
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition-colors"
                 placeholder="jan@firma.pl"
               />
+              <p id="error-email" class="hidden mt-1 text-xs text-red-600 flex items-center gap-1">
+                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                <span></span>
+              </p>
             </div>
             
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Uwagi (opcjonalnie)</label>
-              <textarea 
+              <label class="block text-xs font-medium text-gray-700 mb-1">Uwagi</label>
+              <input 
+                type="text"
                 name="notes"
-                rows="2"
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
                 placeholder="Np. potrzebuję faktury na firmę..."
-              ></textarea>
+              />
             </div>
             
             <button 
               type="submit"
-              class="w-full btn-primary py-4 text-lg"
+              class="w-full btn-primary py-3"
             >
               Wyślij zgłoszenie
             </button>
             
-            <p class="text-xs text-gray-500 text-center">
+            <p class="text-[11px] text-gray-500 text-center">
               Oddzwonimy w ciągu 24h, aby potwierdzić rezerwację.
             </p>
           </form>
@@ -545,8 +552,13 @@ const nextCourses = courses.slice(0, 3);
   }
   
   function validateName(name) {
-    // Minimum 3 znaki, zawiera spację (imię i nazwisko)
+    // Minimum 3 znaki
     return name.trim().length >= 3;
+  }
+  
+  function validateEmail(email) {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regex.test(email.trim());
   }
   
   // Course Cart Logic
@@ -647,10 +659,11 @@ const nextCourses = courses.slice(0, 3);
     const total = items.reduce((sum, c) => sum + c.price, 0);
     
     modalCourses.innerHTML = items.map(c => `
-      <div class="flex justify-between items-center bg-gray-50 rounded-lg p-3">
+      <div class="flex justify-between items-center bg-gray-50 rounded-md px-3 py-2">
         <div>
-          <div class="font-medium">${c.type}</div>
-          <div class="text-sm text-gray-500">${c.date}${c.note ? ` • ${c.note}` : ''}</div>
+          <span class="font-medium">${c.type}</span>
+          <span class="text-gray-400 mx-1">•</span>
+          <span class="text-gray-500">${c.date}</span>
         </div>
         <div class="font-bold">${c.price} zł</div>
       </div>
@@ -678,6 +691,7 @@ const nextCourses = courses.slice(0, 3);
   // Real-time validation on blur
   const nameInput = document.getElementById('input-name');
   const phoneInput = document.getElementById('input-phone');
+  const emailInput = document.getElementById('input-email');
   
   nameInput?.addEventListener('blur', () => {
     if (!validateName(nameInput.value)) {
@@ -701,6 +715,18 @@ const nextCourses = courses.slice(0, 3);
   
   phoneInput?.addEventListener('input', () => clearError('input-phone'));
   
+  emailInput?.addEventListener('blur', () => {
+    if (emailInput.value && !validateEmail(emailInput.value)) {
+      showError('input-email', 'Podaj poprawny adres email');
+    } else if (!emailInput.value) {
+      showError('input-email', 'Email jest wymagany');
+    } else {
+      clearError('input-email');
+    }
+  });
+  
+  emailInput?.addEventListener('input', () => clearError('input-email'));
+  
   // Form submission
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -708,10 +734,12 @@ const nextCourses = courses.slice(0, 3);
     // Clear all errors first
     clearError('input-name');
     clearError('input-phone');
+    clearError('input-email');
     
     const formData = new FormData(form);
     const name = formData.get('name')?.toString().trim() || '';
     const phone = formData.get('phone')?.toString().trim() || '';
+    const email = formData.get('email')?.toString().trim() || '';
     
     // Validate
     let hasErrors = false;
@@ -726,6 +754,14 @@ const nextCourses = courses.slice(0, 3);
       hasErrors = true;
     } else if (!validatePhone(phone)) {
       showError('input-phone', 'Podaj poprawny numer telefonu (9 cyfr)');
+      hasErrors = true;
+    }
+    
+    if (!email) {
+      showError('input-email', 'Email jest wymagany');
+      hasErrors = true;
+    } else if (!validateEmail(email)) {
+      showError('input-email', 'Podaj poprawny adres email');
       hasErrors = true;
     }
     
