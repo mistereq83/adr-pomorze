@@ -234,7 +234,7 @@ function formatDateTime(dateStr: string | null) {
           <div class="p-4 text-gray-500 text-center">Brak otwartych kursów</div>
         ) : (
           upcomingCourses.map((c) => (
-            <a href={`/admin/courses/${c.id}`} class="block p-4 hover:bg-gray-50">
+            <a href={`/admin/courses/view/${c.id}`} class="block p-4 hover:bg-gray-50 transition-colors">
               <div class="flex items-center justify-between mb-1">
                 <span class="font-mono font-medium">{c.startDate} - {c.endDate}</span>
                 <span class={`text-xs px-2 py-1 rounded ${c.courseType === 'cysterny' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`}>
