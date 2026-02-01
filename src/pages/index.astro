@@ -83,10 +83,22 @@ function getDurationDays(startDate: string, endDate: string): number {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 }
 
+// Znacznik dostępności (bez pokazywania dokładnej liczby)
+function getAvailabilityBadge(spots: number): { label: string; color: string; bgColor: string } {
+  if (spots <= 0) {
+    return { label: 'Brak miejsc', color: 'text-red-600', bgColor: 'bg-red-50' };
+  } else if (spots <= 5) {
+    return { label: 'Ostatnie miejsca!', color: 'text-amber-600', bgColor: 'bg-amber-50' };
+  } else {
+    return { label: 'Zapisz się', color: 'text-green-600', bgColor: 'bg-green-50' };
+  }
+}
+
 // Transformuj kursy do formatu frontendu
 const courses = dbCourses.map(course => {
   const reservedCount = reservationMap.get(course.id) || 0;
   const availableSpots = (course.maxParticipants || 15) - reservedCount;
+  const availability = getAvailabilityBadge(availableSpots);
   
   return {
     id: course.id.toString(),
@@ -94,6 +106,7 @@ const courses = dbCourses.map(course => {
     type: getCourseTypeLabel(course.courseType),
     note: getCourseNote(course.courseType, course.startDate),
     spots: Math.max(0, availableSpots),
+    availability,
     price: course.price || 0,
     days: getDurationDays(course.startDate, course.endDate),
   };
@@ -191,7 +204,7 @@ const nextCourses = courses.slice(0, 3);
                     </div>
                   </div>
                   <div class="flex items-center gap-2 flex-shrink-0">
-                    <span class="text-[var(--success)] text-xs font-medium">{course.spots} msc</span>
+                    <span class={`text-xs font-medium ${course.availability.color}`}>{course.availability.label}</span>
                     <svg class="w-4 h-4 text-white/50 group-hover:text-white transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                     </svg>
@@ -228,12 +241,13 @@ const nextCourses = courses.slice(0, 3);
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4 mb-6" id="courses-grid">
         {courses.map((course) => (
           <div 
-            class="course-card bg-white rounded-lg md:rounded-xl p-2.5 md:p-4 border-2 border-gray-200 transition-all hover:shadow-lg cursor-pointer group"
+            class={`course-card bg-white rounded-lg md:rounded-xl p-2.5 md:p-4 border-2 border-gray-200 transition-all hover:shadow-lg group ${course.spots > 0 ? 'cursor-pointer' : 'opacity-75'}`}
             data-id={course.id}
             data-date={course.date}
             data-type={course.type}
             data-price={course.price}
             data-note={course.note}
+            data-spots={course.spots}
           >
             {/* Header: Typ + Badge */}
             <div class="flex items-center justify-between mb-1 md:mb-2">
@@ -255,18 +269,26 @@ const nextCourses = courses.slice(0, 3);
             {/* Separator */}
             <div class="border-t border-gray-100 my-2 md:my-3"></div>
             
-            {/* Price + Spots + Button */}
+            {/* Price + Availability + Button */}
             <div class="flex items-center justify-between">
               <div>
                 <div class="text-sm md:text-lg font-bold text-[var(--primary)]">{course.price} zł</div>
-                <div class="text-[10px] md:text-xs text-[var(--success)]">{course.spots} msc</div>
+                <div class={`text-[10px] md:text-xs font-medium ${course.availability.color}`}>
+                  {course.spots > 0 ? (course.spots <= 5 ? '🟡' : '🟢') : '🔴'} {course.availability.label}
+                </div>
               </div>
-              <button 
-                class="add-course-btn px-2 md:px-4 py-1.5 md:py-2 rounded-md md:rounded-lg font-semibold text-[10px] md:text-sm transition-all
-                       bg-gray-100 text-gray-700 hover:bg-[var(--accent)] hover:text-white"
-              >
-                <span class="btn-text">+ Dodaj</span>
-              </button>
+              {course.spots > 0 ? (
+                <button 
+                  class="add-course-btn px-2 md:px-4 py-1.5 md:py-2 rounded-md md:rounded-lg font-semibold text-[10px] md:text-sm transition-all
+                         bg-gray-100 text-gray-700 hover:bg-[var(--accent)] hover:text-white"
+                >
+                  <span class="btn-text">+ Dodaj</span>
+                </button>
+              ) : (
+                <span class="px-2 md:px-4 py-1.5 md:py-2 rounded-md md:rounded-lg font-semibold text-[10px] md:text-sm bg-gray-100 text-gray-400">
+                  Wyprzedane
+                </span>
+              )}
             </div>
           </div>
         ))}
@@ -583,9 +605,17 @@ const nextCourses = courses.slice(0, 3);
   // Add click handlers to course cards
   document.querySelectorAll('.course-card').forEach(card => {
     const btn = card.querySelector('.add-course-btn');
+    if (!btn) return; // Skip cards without button (sold out)
+    
     const btnText = btn.querySelector('.btn-text');
     
     const toggle = () => {
+      const spots = parseInt(card.dataset.spots || '0');
+      if (spots <= 0) {
+        showToast('Ten termin jest wyprzedany');
+        return;
+      }
+      
       const id = card.dataset.id;
       const isSelected = cart.has(id);
       
