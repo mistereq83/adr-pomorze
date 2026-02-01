@@ -122,16 +122,31 @@ function getSourceLabel(source: string | null) {
   </div>
   
   <!-- Quick actions - na górze -->
-  <div class="flex flex-wrap gap-3 mb-8">
+  <div class="flex flex-wrap items-center gap-3 mb-8">
     <a href="/admin/courses/new" class="btn-primary">
       + Dodaj kurs
     </a>
     <a href="/admin/reservations/new" class="btn-primary bg-[var(--success)] hover:bg-emerald-600">
       + Dodaj rezerwację
     </a>
-    <a href="/admin/participants" class="btn-secondary">
-      🔍 Szukaj uczestnika
-    </a>
+    
+    <!-- Live search uczestników -->
+    <div class="relative flex-1 min-w-[250px] max-w-md">
+      <div class="relative">
+        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+        <input 
+          type="text" 
+          id="participant-search" 
+          placeholder="Szukaj uczestnika (imię, nazwisko, tel)..."
+          autocomplete="off"
+          class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+        />
+      </div>
+      <!-- Wyniki wyszukiwania -->
+      <div id="search-results" class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 hidden max-h-80 overflow-y-auto">
+        <!-- Wypełniane przez JS -->
+      </div>
+    </div>
   </div>
   
   <div class="grid lg:grid-cols-2 gap-6">
@@ -198,4 +213,72 @@ function getSourceLabel(source: string | null) {
     </div>
   </div>
   
+
+  <script>
+    const searchInput = document.getElementById('participant-search');
+    const searchResults = document.getElementById('search-results');
+    let debounceTimer;
+    
+    searchInput?.addEventListener('input', (e) => {
+      const query = e.target.value.trim();
+      
+      clearTimeout(debounceTimer);
+      
+      if (query.length < 2) {
+        searchResults.classList.add('hidden');
+        return;
+      }
+      
+      debounceTimer = setTimeout(async () => {
+        try {
+          const response = await fetch(`/api/participants?search=${encodeURIComponent(query)}`);
+          const participants = await response.json();
+          
+          if (participants.length === 0) {
+            searchResults.innerHTML = `
+              <div class="p-4 text-gray-500 text-center">
+                Nie znaleziono uczestników
+                <a href="/admin/participants" class="block mt-2 text-[var(--accent)] hover:underline text-sm">
+                  Pełna lista →
+                </a>
+              </div>
+            `;
+          } else {
+            searchResults.innerHTML = participants.slice(0, 10).map(p => `
+              <a href="/admin/participants/${p.id}" class="block p-3 hover:bg-gray-50 border-b last:border-b-0">
+                <div class="font-medium">${p.firstName} ${p.lastName}</div>
+                <div class="text-sm text-gray-500">${p.phone || ''} ${p.email ? '• ' + p.email : ''}</div>
+              </a>
+            `).join('');
+            
+            if (participants.length > 10) {
+              searchResults.innerHTML += `
+                <a href="/admin/participants?search=${encodeURIComponent(query)}" class="block p-3 text-center text-[var(--accent)] hover:bg-gray-50 text-sm">
+                  Zobacz wszystkie (${participants.length}) →
+                </a>
+              `;
+            }
+          }
+          
+          searchResults.classList.remove('hidden');
+        } catch (error) {
+          console.error('Search error:', error);
+        }
+      }, 300);
+    });
+    
+    // Ukryj wyniki po kliknięciu poza
+    document.addEventListener('click', (e) => {
+      if (!searchInput?.contains(e.target) && !searchResults?.contains(e.target)) {
+        searchResults?.classList.add('hidden');
+      }
+    });
+    
+    // Pokaż wyniki po focus jeśli jest tekst
+    searchInput?.addEventListener('focus', () => {
+      if (searchInput.value.trim().length >= 2 && searchResults?.innerHTML) {
+        searchResults.classList.remove('hidden');
+      }
+    });
+  </script>
 </AdminLayout>
