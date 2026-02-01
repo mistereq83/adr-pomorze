@@ -5,7 +5,11 @@ import { db } from '../db';
 import { reservations, participants, courses } from '../db/schema';
 import { eq } from 'drizzle-orm';
 
-const ADMIN_EMAIL = import.meta.env.ADMIN_EMAIL || process.env.ADMIN_EMAIL || 'biuro@adr-pomorze.pl';
+// Obsługa wielu adresów admina (rozdzielonych przecinkiem)
+const ADMIN_EMAILS = (import.meta.env.ADMIN_EMAIL || process.env.ADMIN_EMAIL || 'biuro@adr-pomorze.pl')
+  .split(',')
+  .map((e: string) => e.trim())
+  .filter((e: string) => e.includes('@'));
 
 // Typy eventów mailowych
 type EmailEvent = 
@@ -122,18 +126,20 @@ export async function sendEmailForEvent(
           });
         }
         
-        // Email do admina
+        // Email do adminów (wszystkich)
         const adminHtml = templates.adminNewReservation(participantInfo, courseInfo, reservationInfo);
-        const adminSuccess = await sendEmail({
-          to: ADMIN_EMAIL,
-          subject: `🔔 Nowe zgłoszenie: ${participant.firstName} ${participant.lastName}`,
-          html: adminHtml,
-        });
-        results.push({
-          success: adminSuccess,
-          event: 'reservation_submitted',
-          recipientEmail: ADMIN_EMAIL,
-        });
+        for (const adminEmail of ADMIN_EMAILS) {
+          const adminSuccess = await sendEmail({
+            to: adminEmail,
+            subject: `🔔 Nowe zgłoszenie: ${participant.firstName} ${participant.lastName}`,
+            html: adminHtml,
+          });
+          results.push({
+            success: adminSuccess,
+            event: 'reservation_submitted',
+            recipientEmail: adminEmail,
+          });
+        }
         break;
         
       case 'reservation_confirmed':
