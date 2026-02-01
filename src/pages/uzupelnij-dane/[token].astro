@@ -1,0 +1,408 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { db } from '../../db';
+import { completionTokens, participants, reservations, courses } from '../../db/schema';
+import { eq } from 'drizzle-orm';
+import { findOrCreateParticipant } from '../../lib/participants';
+
+const { token } = Astro.params;
+
+// Sprawdź token
+const tokenData = await db.select({
+  token: completionTokens,
+  participant: participants,
+  reservation: reservations,
+  course: courses,
+})
+  .from(completionTokens)
+  .leftJoin(participants, eq(completionTokens.participantId, participants.id))
+  .leftJoin(reservations, eq(completionTokens.reservationId, reservations.id))
+  .leftJoin(courses, eq(reservations.courseId, courses.id))
+  .where(eq(completionTokens.token, token || ''))
+  .limit(1);
+
+const data = tokenData[0];
+const now = new Date();
+
+// Walidacja tokenu
+let error = '';
+let isValid = true;
+
+if (!data) {
+  error = 'Nieprawidłowy link. Skontaktuj się z organizatorem szkolenia.';
+  isValid = false;
+} else if (data.token.status === 'completed') {
+  error = 'Ten formularz został już wypełniony. Jeśli potrzebujesz dokonać zmian, skontaktuj się z nami.';
+  isValid = false;
+} else if (data.token.status === 'expired' || new Date(data.token.expiresAt) < now) {
+  error = 'Link wygasł. Skontaktuj się z organizatorem szkolenia, aby otrzymać nowy link.';
+  isValid = false;
+}
+
+let success = false;
+let formError = '';
+
+// Obsługa formularza
+if (isValid && Astro.request.method === 'POST') {
+  try {
+    const formData = await Astro.request.formData();
+    
+    // Aktualizuj dane uczestnika (nadpisz wszystko)
+    await db.update(participants)
+      .set({
+        firstName: formData.get('firstName') as string,
+        lastName: formData.get('lastName') as string,
+        pesel: formData.get('pesel') as string || null,
+        birthDate: formData.get('birthDate') as string || null,
+        birthPlace: formData.get('birthPlace') as string || null,
+        street: formData.get('street') as string || null,
+        city: formData.get('city') as string || null,
+        postalCode: formData.get('postalCode') as string || null,
+        phone: (formData.get('phone') as string).replace(/\s/g, ''),
+        email: formData.get('email') as string || null,
+        driverLicenseCategories: formData.get('driverLicenseCategories') as string || null,
+        hasCurrentAdr: formData.get('hasCurrentAdr') === 'on',
+        currentAdrNumber: formData.get('currentAdrNumber') as string || null,
+        currentAdrExpiry: formData.get('currentAdrExpiry') as string || null,
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(participants.id, data!.participant!.id));
+    
+    // Oznacz token jako użyty
+    await db.update(completionTokens)
+      .set({
+        status: 'completed',
+        usedAt: new Date().toISOString(),
+      })
+      .where(eq(completionTokens.id, data!.token.id));
+    
+    // Oznacz rezerwację jako z kompletnymi danymi
+    await db.update(reservations)
+      .set({
+        dataCompleted: true,
+        dataCompletedAt: new Date().toISOString(),
+      })
+      .where(eq(reservations.id, data!.reservation!.id));
+    
+    success = true;
+  } catch (e) {
+    console.error('Form error:', e);
+    formError = 'Wystąpił błąd podczas zapisywania. Spróbuj ponownie.';
+  }
+}
+
+const participant = data?.participant;
+const course = data?.course;
+
+function formatDate(dateStr: string | null) {
+  if (!dateStr) return '';
+  return dateStr.split('T')[0];
+}
+
+function getCourseTypeLabel(type: string | null) {
+  const labels: Record<string, string> = {
+    'podstawowy': 'Kurs podstawowy',
+    'cysterny': 'Kurs specjalistyczny - cysterny',
+    'klasa1': 'Klasa 1 (materiały wybuchowe)',
+    'klasa7': 'Klasa 7 (promieniotwórcze)',
+    'odnowienie': 'Szkolenie odnawiające',
+  };
+  return labels[type || ''] || type || '';
+}
+---
+
+<Layout title="Uzupełnij dane | ADR Pomorze">
+  <div class="min-h-screen bg-gray-50 py-8 md:py-12">
+    <div class="container-custom px-4">
+      <div class="max-w-2xl mx-auto">
+        
+        {!isValid ? (
+          <!-- Error state -->
+          <div class="bg-white rounded-2xl shadow-lg p-8 text-center">
+            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-900 mb-2">Link nieaktywny</h1>
+            <p class="text-gray-600 mb-6">{error}</p>
+            <div class="bg-gray-50 rounded-lg p-4">
+              <p class="text-sm text-gray-600">
+                Zadzwoń: <a href="tel:+48502611639" class="font-bold text-[var(--accent)]">502 611 639</a>
+              </p>
+            </div>
+          </div>
+        ) : success ? (
+          <!-- Success state -->
+          <div class="bg-white rounded-2xl shadow-lg p-8 text-center">
+            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-900 mb-2">Dziękujemy!</h1>
+            <p class="text-gray-600 mb-6">
+              Twoje dane zostały zapisane. Do zobaczenia na szkoleniu!
+            </p>
+            {course && (
+              <div class="bg-blue-50 rounded-lg p-4 mb-6">
+                <p class="font-medium text-blue-900">{getCourseTypeLabel(course.courseType)}</p>
+                <p class="text-blue-700">{course.startDate} - {course.endDate}</p>
+                <p class="text-blue-600 text-sm">{course.location}</p>
+              </div>
+            )}
+            <a href="/" class="btn-primary">
+              Wróć na stronę główną
+            </a>
+          </div>
+        ) : (
+          <!-- Form -->
+          <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+            <div class="bg-gradient-to-r from-[var(--primary)] to-[var(--primary-light)] p-6 text-white">
+              <h1 class="text-xl md:text-2xl font-bold mb-1">Uzupełnij dane do szkolenia</h1>
+              {course && (
+                <p class="text-white/80">
+                  {getCourseTypeLabel(course.courseType)} • {course.startDate}
+                </p>
+              )}
+            </div>
+            
+            <div class="p-6">
+              {formError && (
+                <div class="bg-red-50 text-red-700 p-4 rounded-lg mb-6">
+                  {formError}
+                </div>
+              )}
+              
+              <p class="text-gray-600 text-sm mb-6">
+                Prosimy o uzupełnienie wszystkich danych. Są one niezbędne do wystawienia zaświadczenia ADR.
+              </p>
+              
+              <form method="POST" class="space-y-6">
+                <!-- Dane osobowe -->
+                <div>
+                  <h2 class="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                    <span>👤</span> Dane osobowe
+                  </h2>
+                  
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Imię *</label>
+                      <input 
+                        type="text" 
+                        name="firstName" 
+                        value={participant?.firstName || ''}
+                        required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Nazwisko *</label>
+                      <input 
+                        type="text" 
+                        name="lastName" 
+                        value={participant?.lastName || ''}
+                        required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">PESEL *</label>
+                      <input 
+                        type="text" 
+                        name="pesel" 
+                        value={participant?.pesel || ''}
+                        required
+                        maxlength="11"
+                        pattern="[0-9]{11}"
+                        placeholder="11 cyfr"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Data urodzenia *</label>
+                      <input 
+                        type="date" 
+                        name="birthDate" 
+                        value={formatDate(participant?.birthDate)}
+                        required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+                      />
+                    </div>
+                    <div class="md:col-span-2">
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Miejsce urodzenia *</label>
+                      <input 
+                        type="text" 
+                        name="birthPlace" 
+                        value={participant?.birthPlace || ''}
+                        required
+                        placeholder="Miasto"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Adres -->
+                <div>
+                  <h2 class="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                    <span>📍</span> Adres zamieszkania
+                  </h2>
+                  
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Ulica i numer *</label>
+                      <input 
+                        type="text" 
+                        name="street" 
+                        value={participant?.street || ''}
+                        required
+                        placeholder="np. ul. Długa 15/3"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Kod pocztowy *</label>
+                      <input 
+                        type="text" 
+                        name="postalCode" 
+                        value={participant?.postalCode || ''}
+                        required
+                        placeholder="00-000"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Miasto *</label>
+                      <input 
+                        type="text" 
+                        name="city" 
+                        value={participant?.city || ''}
+                        required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Kontakt -->
+                <div>
+                  <h2 class="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                    <span>📞</span> Dane kontaktowe
+                  </h2>
+                  
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Telefon *</label>
+                      <input 
+                        type="tel" 
+                        name="phone" 
+                        value={participant?.phone || ''}
+                        required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                      <input 
+                        type="email" 
+                        name="email" 
+                        value={participant?.email || ''}
+                        required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Prawo jazdy -->
+                <div>
+                  <h2 class="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                    <span>🚗</span> Prawo jazdy
+                  </h2>
+                  
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Kategorie prawa jazdy *</label>
+                    <input 
+                      type="text" 
+                      name="driverLicenseCategories" 
+                      value={participant?.driverLicenseCategories || ''}
+                      required
+                      placeholder="np. B, C, C+E"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+                    />
+                  </div>
+                </div>
+                
+                <!-- ADR (jeśli odnowienie) -->
+                <div>
+                  <h2 class="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                    <span>🚛</span> Aktualne uprawnienia ADR
+                  </h2>
+                  
+                  <div class="mb-4">
+                    <label class="flex items-center gap-2">
+                      <input 
+                        type="checkbox" 
+                        name="hasCurrentAdr"
+                        id="hasCurrentAdr"
+                        checked={participant?.hasCurrentAdr}
+                        class="w-5 h-5 rounded border-gray-300 text-[var(--accent)]"
+                      />
+                      <span>Posiadam aktualne zaświadczenie ADR (szkolenie odnawiające)</span>
+                    </label>
+                  </div>
+                  
+                  <div id="adrFields" class={participant?.hasCurrentAdr ? '' : 'hidden'}>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Numer zaświadczenia ADR</label>
+                        <input 
+                          type="text" 
+                          name="currentAdrNumber" 
+                          value={participant?.currentAdrNumber || ''}
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Data ważności</label>
+                        <input 
+                          type="date" 
+                          name="currentAdrExpiry" 
+                          value={formatDate(participant?.currentAdrExpiry)}
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Submit -->
+                <div class="pt-4 border-t">
+                  <button type="submit" class="w-full btn-primary py-3 text-lg">
+                    Zapisz dane
+                  </button>
+                  <p class="text-center text-xs text-gray-500 mt-3">
+                    Po zapisaniu danych ten link przestanie działać.
+                  </p>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+        
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script is:inline>
+document.getElementById('hasCurrentAdr')?.addEventListener('change', function() {
+  const fields = document.getElementById('adrFields');
+  if (this.checked) {
+    fields.classList.remove('hidden');
+  } else {
+    fields.classList.add('hidden');
+  }
+});
+</script>

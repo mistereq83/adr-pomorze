@@ -68,6 +68,10 @@ export const reservations = sqliteTable('reservations', {
   // Źródło
   source: text('source').default('website'),  // 'website', 'telefon', 'email', 'manual'
   
+  // Status uzupełnienia danych przez uczestnika
+  dataCompleted: integer('data_completed', { mode: 'boolean' }).default(false),
+  dataCompletedAt: text('data_completed_at'),
+  
   // Zgody
   consentRules: integer('consent_rules', { mode: 'boolean' }).default(false),
   consentRodo: integer('consent_rodo', { mode: 'boolean' }).default(false),
@@ -103,6 +107,26 @@ export const smsLog = sqliteTable('sms_log', {
   cost: real('cost'),                        // Koszt w punktach
   reservationId: integer('reservation_id').references(() => reservations.id),
   createdAt: text('created_at').default('CURRENT_TIMESTAMP'),
+});
+
+// Tokeny do formularza uzupełniania danych
+export const completionTokens = sqliteTable('completion_tokens', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  token: text('token').notNull().unique(),              // Unikalny hash
+  reservationId: integer('reservation_id').references(() => reservations.id).notNull(),
+  participantId: integer('participant_id').references(() => participants.id).notNull(),
+  
+  // Status
+  status: text('status').default('pending'),            // 'pending', 'completed', 'expired'
+  
+  // Timestamps
+  createdAt: text('created_at').default('CURRENT_TIMESTAMP'),
+  expiresAt: text('expires_at').notNull(),              // 7 dni od utworzenia
+  usedAt: text('used_at'),                              // Kiedy użyto (wypełniono formularz)
+  
+  // Wysyłka
+  sentVia: text('sent_via'),                            // 'sms', 'email', 'both'
+  sentAt: text('sent_at'),
 });
 
 // Historia certyfikatów/zaświadczeń ADR
@@ -141,6 +165,8 @@ export const adrCertificates = sqliteTable('adr_certificates', {
 // Typy TypeScript
 export type AdrCertificate = typeof adrCertificates.$inferSelect;
 export type NewAdrCertificate = typeof adrCertificates.$inferInsert;
+export type CompletionToken = typeof completionTokens.$inferSelect;
+export type NewCompletionToken = typeof completionTokens.$inferInsert;
 export type Course = typeof courses.$inferSelect;
 export type NewCourse = typeof courses.$inferInsert;
 export type Participant = typeof participants.$inferSelect;

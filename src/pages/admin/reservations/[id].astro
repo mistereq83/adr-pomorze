@@ -1,8 +1,8 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { db } from '../../../db';
-import { courses, participants, reservations } from '../../../db/schema';
-import { eq, and, notInArray, count } from 'drizzle-orm';
+import { courses, participants, reservations, completionTokens } from '../../../db/schema';
+import { eq, and, notInArray, count, desc } from 'drizzle-orm';
 
 const { id } = Astro.params;
 
@@ -42,6 +42,21 @@ const participant = await db.select()
   .from(participants)
   .where(eq(participants.id, reservation.participantId))
   .get();
+
+// Pobierz ostatni token uzupełniania danych
+const lastToken = await db.select()
+  .from(completionTokens)
+  .where(eq(completionTokens.reservationId, parseInt(id)))
+  .orderBy(desc(completionTokens.createdAt))
+  .limit(1)
+  .get();
+
+// Status uzupełnienia danych
+const dataStatus = reservation.dataCompleted 
+  ? 'completed' 
+  : lastToken?.status === 'pending' 
+    ? 'pending' 
+    : 'none';
 
 // Obsługa aktualizacji
 let message = '';
@@ -283,6 +298,101 @@ const statusColors: Record<string, string> = {
         )}
       </div>
     </div>
+
+    <!-- Uzupełnianie danych przez uczestnika -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mt-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold flex items-center gap-2">
+          <span class="text-2xl">📝</span> Dane od uczestnika
+        </h2>
+        <span class={`px-3 py-1 rounded-full text-sm font-medium ${
+          dataStatus === 'completed' ? 'bg-green-100 text-green-800' :
+          dataStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+          'bg-gray-100 text-gray-800'
+        }`}>
+          {dataStatus === 'completed' ? '✅ Kompletne' :
+           dataStatus === 'pending' ? '⏳ Oczekuje' :
+           '🔴 Brak'}
+        </span>
+      </div>
+      
+      {dataStatus === 'completed' ? (
+        <p class="text-gray-600 text-sm mb-4">
+          Uczestnik uzupełnił dane {reservation.dataCompletedAt && `dnia ${new Date(reservation.dataCompletedAt).toLocaleDateString('pl-PL')}`}.
+          <a href={`/admin/participants/${participant?.id}`} class="text-[var(--accent)] hover:underline ml-1">
+            Zobacz profil →
+          </a>
+        </p>
+      ) : dataStatus === 'pending' && lastToken ? (
+        <div class="text-sm text-gray-600 mb-4">
+          <p>Link wysłany {lastToken.sentAt && new Date(lastToken.sentAt).toLocaleDateString('pl-PL')}.</p>
+          <p>Ważny do: <span class="font-medium">{new Date(lastToken.expiresAt).toLocaleDateString('pl-PL')}</span></p>
+        </div>
+      ) : (
+        <p class="text-gray-600 text-sm mb-4">
+          Wyślij uczestnikowi link do uzupełnienia pełnych danych (PESEL, adres, itp.).
+        </p>
+      )}
+      
+      <div class="flex gap-3">
+        <button 
+          id="sendLinkBtn"
+          class="px-4 py-2 bg-[var(--accent)] text-white rounded-lg hover:bg-opacity-90 transition-colors flex items-center gap-2"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+          </svg>
+          {dataStatus === 'none' ? 'Wyślij link' : 'Wyślij ponownie'}
+        </button>
+        
+        {lastToken?.status === 'pending' && (
+          <button 
+            id="copyLinkBtn"
+            data-token={lastToken.token}
+            class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+          >
+            📋 Kopiuj link
+          </button>
+        )}
+      </div>
+    </div>
+    
+    <script define:vars={{ reservationId: id }}>
+      document.getElementById('sendLinkBtn')?.addEventListener('click', async () => {
+        const btn = document.getElementById('sendLinkBtn');
+        btn.disabled = true;
+        btn.textContent = 'Wysyłanie...';
+        
+        try {
+          const response = await fetch(`/api/reservations/${reservationId}/send-completion-link`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sendVia: 'sms' })
+          });
+          
+          const result = await response.json();
+          
+          if (response.ok) {
+            alert('Link wysłany SMS-em!');
+            window.location.reload();
+          } else {
+            alert('Błąd: ' + (result.error || 'Nieznany błąd'));
+          }
+        } catch (error) {
+          alert('Błąd wysyłania: ' + error.message);
+        } finally {
+          btn.disabled = false;
+          btn.textContent = 'Wyślij link';
+        }
+      });
+      
+      document.getElementById('copyLinkBtn')?.addEventListener('click', () => {
+        const token = document.getElementById('copyLinkBtn').dataset.token;
+        const url = `${window.location.origin}/uzupelnij-dane/${token}`;
+        navigator.clipboard.writeText(url);
+        alert('Link skopiowany do schowka!');
+      });
+    </script>
 
     <!-- Akcje -->
     <div class="mt-6 flex justify-between items-center">
