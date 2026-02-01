@@ -3,6 +3,7 @@ import { db } from '../../../db';
 import { reservations, participants, courses } from '../../../db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { validateAndNormalizePhone } from '../../../lib/phone';
+import { findOrCreateParticipant } from '../../../lib/participants';
 
 // GET /api/reservations - lista rezerwacji z joinami
 export const GET: APIRoute = async ({ url }) => {
@@ -64,18 +65,18 @@ export const POST: APIRoute = async ({ request }) => {
         });
       }
       
-      const newParticipant = await db.insert(participants).values({
+      // Deduplikacja: znajdź lub utwórz uczestnika
+      const result = await findOrCreateParticipant({
         firstName: data.participant.firstName,
         lastName: data.participant.lastName,
         phone: normalizedPhone,
-        email: data.participant.email,
+        email: data.participant.email || '',
         pesel: data.participant.pesel,
         hasCurrentAdr: data.participant.hasCurrentAdr || false,
         currentAdrNumber: data.participant.currentAdrNumber,
-        createdAt: new Date().toISOString(),
-      }).returning();
+      });
       
-      participantId = newParticipant[0].id;
+      participantId = result.participant.id;
     }
     
     // Stwórz rezerwację

@@ -1,8 +1,9 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { db } from '../db';
-import { courses, participants, reservations } from '../db/schema';
+import { courses, reservations } from '../db/schema';
 import { eq } from 'drizzle-orm';
+import { findOrCreateParticipant } from '../lib/participants';
 
 let step = 1;
 let error = '';
@@ -19,17 +20,18 @@ if (Astro.request.method === 'POST') {
     const action = formData.get('action');
     
     if (action === 'submit') {
-      // Zapisz uczestnika
-      const newParticipant = await db.insert(participants).values({
+      // Znajdź lub utwórz uczestnika (deduplikacja po PESEL/telefon/email)
+      const participantResult = await findOrCreateParticipant({
         firstName: formData.get('firstName') as string,
         lastName: formData.get('lastName') as string,
         phone: formData.get('phone') as string,
-        email: formData.get('email') as string || null,
+        email: formData.get('email') as string || '',
         pesel: formData.get('pesel') as string || null,
         hasCurrentAdr: formData.get('hasCurrentAdr') === 'on',
         currentAdrNumber: formData.get('currentAdrNumber') as string || null,
-        createdAt: new Date().toISOString(),
-      }).returning();
+      });
+      
+      const newParticipant = [participantResult.participant];
       
       // Zapisz rezerwację
       await db.insert(reservations).values({

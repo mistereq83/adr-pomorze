@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../db';
-import { reservations, participants } from '../../../db/schema';
+import { reservations } from '../../../db/schema';
+import { findOrCreateParticipant } from '../../../lib/participants';
 
 // POST /api/reservations/bulk - rezerwacja na wiele szkoleń naraz
 export const POST: APIRoute = async ({ request }) => {
@@ -8,8 +9,8 @@ export const POST: APIRoute = async ({ request }) => {
     const data = await request.json();
     
     // Walidacja
-    if (!data.name || !data.phone) {
-      return new Response(JSON.stringify({ error: 'Imię i telefon są wymagane' }), {
+    if (!data.name || !data.phone || !data.email) {
+      return new Response(JSON.stringify({ error: 'Imię, telefon i email są wymagane' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
@@ -27,27 +28,25 @@ export const POST: APIRoute = async ({ request }) => {
     const firstName = nameParts[0];
     const lastName = nameParts.slice(1).join(' ') || '-';
     
-    // Stwórz uczestnika
-    const newParticipant = await db.insert(participants).values({
+    // Znajdź lub utwórz uczestnika (deduplikacja po PESEL/telefon/email)
+    const result = await findOrCreateParticipant({
       firstName,
       lastName,
-      phone: data.phone.replace(/\s/g, ''),
-      email: data.email || null,
+      phone: data.phone,
+      email: data.email,
       notes: data.notes || null,
-      createdAt: new Date().toISOString(),
-    }).returning();
+    });
     
-    const participantId = newParticipant[0].id;
+    const participantId = result.participant.id;
     
     // Stwórz rezerwacje dla każdego kursu
     const createdReservations = [];
     
     for (const course of data.courses) {
-      // Utwórz szczegóły w notes (bo kursy mogą nie być jeszcze w bazie)
       const courseDetails = `${course.type} (${course.date})${course.note ? ` - ${course.note}` : ''} - ${course.price} zł`;
       
       const reservation = await db.insert(reservations).values({
-        courseId: course.dbId || null, // jeśli mamy ID z bazy
+        courseId: parseInt(course.id) || null,
         participantId: participantId,
         status: 'pending',
         paymentStatus: 'unpaid',
@@ -61,9 +60,14 @@ export const POST: APIRoute = async ({ request }) => {
     
     return new Response(JSON.stringify({
       success: true,
-      participant: newParticipant[0],
+      participant: result.participant,
+      participantIsNew: result.isNew,
+      participantMatched: result.matched,
+      fieldsUpdated: result.fieldsUpdated,
       reservations: createdReservations,
-      message: `Utworzono ${createdReservations.length} rezerwacji`
+      message: result.isNew 
+        ? `Nowy uczestnik + ${createdReservations.length} rezerwacji`
+        : `Istniejący uczestnik (${result.matched}) + ${createdReservations.length} rezerwacji`
     }), {
       status: 201,
       headers: { 'Content-Type': 'application/json' }
