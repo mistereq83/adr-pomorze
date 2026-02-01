@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 import { randomBytes } from 'crypto';
 import { sendSms } from '../../../../lib/sms';
 
-const PUBLIC_URL = process.env.PUBLIC_URL || 'https://adr-pomorze.pl';
+const PUBLIC_URL = process.env.PUBLIC_URL || 'https://adr.apps.ekolan.pl';
 
 /**
  * POST /api/reservations/:id/send-completion-link
