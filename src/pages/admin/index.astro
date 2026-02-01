@@ -139,8 +139,7 @@ function getSourceLabel(source: string | null) {
           id="participant-search" 
           placeholder="Szukaj uczestnika..."
           autocomplete="off"
-          inputmode="search"
-          tabindex="0"
+          readonly
           class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
         />
       </div>
@@ -221,10 +220,16 @@ function getSourceLabel(source: string | null) {
     const searchResults = document.getElementById('search-results');
     let debounceTimer;
     
-    // Upewnij się że input nie ma focusa przy ładowaniu (zapobiega klawiaturze na mobile)
+    // Usuń readonly po kliknięciu (zapobiega auto-focus i klawiaturze na mobile przy ładowaniu)
     if (searchInput) {
-      searchInput.blur();
-      document.activeElement?.blur();
+      searchInput.addEventListener('click', function() {
+        this.removeAttribute('readonly');
+        this.focus();
+      }, { once: false });
+      
+      searchInput.addEventListener('touchstart', function() {
+        this.removeAttribute('readonly');
+      }, { once: false });
     }
     
     searchInput?.addEventListener('input', (e) => {
