@@ -68,6 +68,17 @@ if (isValid && Astro.request.method === 'POST') {
       })
       .where(eq(participants.id, data!.participant!.id));
     
+    // Aktualizuj dane faktury w rezerwacji
+    const needsInvoice = formData.get('needsInvoice') === 'on';
+    await db.update(reservations)
+      .set({
+        needsInvoice: needsInvoice,
+        invoiceCompany: needsInvoice ? formData.get('invoiceCompany') as string || null : null,
+        invoiceNip: needsInvoice ? formData.get('invoiceNip') as string || null : null,
+        invoiceAddress: needsInvoice ? formData.get('invoiceAddress') as string || null : null,
+      })
+      .where(eq(reservations.id, data!.reservation!.id));
+    
     // Oznacz token jako użyty
     await db.update(completionTokens)
       .set({
@@ -315,6 +326,64 @@ function getCourseTypeLabel(type: string | null) {
                   </div>
                 </div>
                 
+                <!-- Faktura -->
+                <div>
+                  <h2 class="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                    <span>🧾</span> Faktura
+                  </h2>
+                  
+                  <div class="mb-4">
+                    <label class="flex items-center gap-2">
+                      <input 
+                        type="checkbox" 
+                        name="needsInvoice"
+                        id="needsInvoice"
+                        checked={data?.reservation?.needsInvoice}
+                        class="w-5 h-5 rounded border-gray-300 text-[var(--accent)]"
+                      />
+                      <span>Potrzebuję faktury VAT</span>
+                    </label>
+                  </div>
+                  
+                  <div id="invoiceFields" class={data?.reservation?.needsInvoice ? '' : 'hidden'}>
+                    <div class="space-y-4 bg-gray-50 p-4 rounded-lg">
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nazwa firmy *</label>
+                        <input 
+                          type="text" 
+                          name="invoiceCompany" 
+                          value={data?.reservation?.invoiceCompany || ''}
+                          placeholder="Pełna nazwa firmy"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">NIP *</label>
+                        <input 
+                          type="text" 
+                          name="invoiceNip" 
+                          value={data?.reservation?.invoiceNip || ''}
+                          placeholder="000-000-00-00"
+                          maxlength="13"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Adres firmy *</label>
+                        <textarea 
+                          name="invoiceAddress" 
+                          rows="2"
+                          placeholder="Ulica, kod pocztowy, miasto"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+                        >{data?.reservation?.invoiceAddress || ''}</textarea>
+                      </div>
+                      <p class="text-xs text-gray-500">
+                        Faktura zostanie wystawiona i wysłana na podany adres email.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
                 <!-- Prawo jazdy -->
                 <div>
                   <h2 class="font-bold text-gray-900 mb-3 flex items-center gap-2">
@@ -410,6 +479,21 @@ document.getElementById('hasCurrentAdr')?.addEventListener('change', function() 
     fields.classList.remove('hidden');
   } else {
     fields.classList.add('hidden');
+  }
+});
+
+document.getElementById('needsInvoice')?.addEventListener('change', function() {
+  const fields = document.getElementById('invoiceFields');
+  if (this.checked) {
+    fields.classList.remove('hidden');
+    // Ustaw pola jako wymagane
+    fields.querySelectorAll('input, textarea').forEach(el => {
+      if (!el.dataset.optional) el.required = true;
+    });
+  } else {
+    fields.classList.add('hidden');
+    // Usuń wymaganie
+    fields.querySelectorAll('input, textarea').forEach(el => el.required = false);
   }
 });
 </script>
