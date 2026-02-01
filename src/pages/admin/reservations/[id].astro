@@ -76,15 +76,30 @@ if (Astro.request.method === 'POST') {
       
       // Wyślij SMS przy zmianie statusu
       let smsResult = { success: false, error: '' };
+      let linkResult = { success: false };
+      
       if (newStatus === 'confirmed' && oldStatus !== 'confirmed') {
         smsResult = await sendSmsForEvent('reservation_confirmed', parseInt(id));
+        
+        // Automatycznie wyślij link do uzupełnienia danych
+        try {
+          const response = await fetch(`${Astro.url.origin}/api/reservations/${id}/send-completion-link`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sendVia: 'sms' })
+          });
+          linkResult = await response.json();
+        } catch (e) {
+          console.error('Error sending completion link:', e);
+        }
       } else if (newStatus === 'paid' && oldStatus !== 'paid') {
         smsResult = await sendSmsForEvent('reservation_paid', parseInt(id));
       }
       
-      message = smsResult.success 
-        ? `Status zaktualizowany + SMS wysłany` 
-        : `Status zaktualizowany${smsResult.error ? ` (SMS: ${smsResult.error})` : ''}`;
+      const parts = ['Status zaktualizowany'];
+      if (smsResult.success) parts.push('SMS wysłany');
+      if (linkResult.success) parts.push('Link do danych wysłany');
+      message = parts.join(' + ');
     } else if (action === 'delete') {
       await db.delete(reservations).where(eq(reservations.id, parseInt(id)));
       return Astro.redirect('/admin/reservations');
