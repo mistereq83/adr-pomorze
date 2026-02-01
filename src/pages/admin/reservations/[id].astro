@@ -101,8 +101,11 @@ if (Astro.request.method === 'POST') {
       if (linkResult.success) parts.push('Link do danych wysłany');
       message = parts.join(' + ');
     } else if (action === 'delete') {
+      // Najpierw usuń powiązane tokeny
+      await db.delete(completionTokens).where(eq(completionTokens.reservationId, parseInt(id)));
+      // Potem usuń rezerwację
       await db.delete(reservations).where(eq(reservations.id, parseInt(id)));
-      return Astro.redirect('/admin/reservations');
+      return Astro.redirect('/admin/reservations?msg=deleted');
     }
     
     // Odśwież dane
