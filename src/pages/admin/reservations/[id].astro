@@ -3,6 +3,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { db } from '../../../db';
 import { courses, participants, reservations, completionTokens } from '../../../db/schema';
 import { eq, and, notInArray, count, desc } from 'drizzle-orm';
+import { sendSmsForEvent } from '../../../lib/sms';
 
 const { id } = Astro.params;
 
@@ -66,10 +67,24 @@ if (Astro.request.method === 'POST') {
     const action = formData.get('action');
     
     if (action === 'update_status') {
+      const newStatus = formData.get('status') as string;
+      const oldStatus = reservation.status;
+      
       await db.update(reservations)
-        .set({ status: formData.get('status') as string })
+        .set({ status: newStatus })
         .where(eq(reservations.id, parseInt(id)));
-      message = 'Status zaktualizowany';
+      
+      // Wyślij SMS przy zmianie statusu
+      let smsResult = { success: false, error: '' };
+      if (newStatus === 'confirmed' && oldStatus !== 'confirmed') {
+        smsResult = await sendSmsForEvent('reservation_confirmed', parseInt(id));
+      } else if (newStatus === 'paid' && oldStatus !== 'paid') {
+        smsResult = await sendSmsForEvent('reservation_paid', parseInt(id));
+      }
+      
+      message = smsResult.success 
+        ? `Status zaktualizowany + SMS wysłany` 
+        : `Status zaktualizowany${smsResult.error ? ` (SMS: ${smsResult.error})` : ''}`;
     } else if (action === 'delete') {
       await db.delete(reservations).where(eq(reservations.id, parseInt(id)));
       return Astro.redirect('/admin/reservations');

@@ -145,6 +145,14 @@ export function initDatabase() {
     sqlite.exec(`ALTER TABLE reservations ADD COLUMN data_completed_at TEXT`);
   } catch (e) { /* kolumna już istnieje */ }
   
+  // Dodaj domyślne szablony SMS
+  sqlite.exec(`
+    INSERT OR IGNORE INTO sms_templates (event, name, template, enabled) VALUES 
+    ('reservation_confirmed', 'Potwierdzenie rezerwacji', 'Cześć {{imie}}! Twoja rezerwacja na kurs ADR ({{data}}) została potwierdzona. Czekamy na Ciebie! ADR Pomorze', 1),
+    ('reservation_paid', 'Potwierdzenie płatności', '{{imie}}, dziękujemy za wpłatę za kurs ADR ({{data}}). Do zobaczenia! ADR Pomorze', 1),
+    ('course_reminder', 'Przypomnienie o kursie', '{{imie}}, przypominamy: kurs ADR zaczyna się {{data}} o 8:00 w {{lokalizacja}}. ADR Pomorze', 1);
+  `);
+  
   console.log('Database initialized at:', DB_PATH);
 }
 
