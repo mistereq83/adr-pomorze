@@ -4,7 +4,8 @@ import { adrCertificates, participants } from '../../../db/schema';
 import { eq, and, lte, gte } from 'drizzle-orm';
 import { sendSms } from '../../../lib/sms';
 
-const CRON_SECRET = import.meta.env.CRON_SECRET || process.env.CRON_SECRET || 'adr-reminder-cron-K8mX2pL9';
+// Wymagane - brak fallbacku!
+const CRON_SECRET = import.meta.env.CRON_SECRET || process.env.CRON_SECRET;
 
 /**
  * GET /api/cron/adr-expiry-reminders
@@ -24,6 +25,13 @@ const CRON_SECRET = import.meta.env.CRON_SECRET || process.env.CRON_SECRET || 'a
 export const GET: APIRoute = async ({ url }) => {
   const secret = url.searchParams.get('secret');
   const dryRun = url.searchParams.get('dry_run') === '1';
+  
+  if (!CRON_SECRET) {
+    return new Response(JSON.stringify({ error: 'CRON_SECRET not configured' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
   
   if (secret !== CRON_SECRET) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {

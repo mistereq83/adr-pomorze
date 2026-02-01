@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 
-const CRON_SECRET = process.env.CRON_SECRET || 'adr-reminder-cron-K8mX2pL9';
+// Wymagane - brak fallbacku!
+const CRON_SECRET = process.env.CRON_SECRET;
 const BASE_URL = process.env.PUBLIC_URL || 'http://localhost:4321';
 
 let initialized = false;
