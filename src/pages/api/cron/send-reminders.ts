@@ -1,36 +1,17 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../db';
 import { reservations, participants, courses } from '../../../db/schema';
-import { eq, and, gte, lte, notInArray } from 'drizzle-orm';
-import { sendSmsForEvent } from '../../../lib/sms';
+import { eq, and, gte, lte } from 'drizzle-orm';
+import { sendEmailForEvent } from '../../../lib/email-service';
 
-// Klucz do autoryzacji crona (prosty, ale skuteczny)
-// Wymagane - brak fallbacku!
-const CRON_SECRET = import.meta.env.CRON_SECRET || process.env.CRON_SECRET;
-
-/**
- * GET /api/cron/send-reminders
- * 
- * Wysyła przypomnienia SMS do uczestników kursów rozpoczynających się jutro.
- * Wywoływać codziennie o 20:00.
- * 
- * Query params:
- * - secret: klucz autoryzacyjny
- * - dry_run=1: tylko sprawdź, nie wysyłaj
- */
-export const GET: APIRoute = async ({ url }) => {
-  const secret = url.searchParams.get('secret');
-  const dryRun = url.searchParams.get('dry_run') === '1';
+// GET /api/cron/send-reminders - wysyła przypomnienia 3 dni przed kursem
+// Uruchamiać codziennie rano (np. przez cron w Coolify lub zewnętrzny scheduler)
+export const GET: APIRoute = async ({ url, request }) => {
+  // Opcjonalna autoryzacja przez header lub query param
+  const authHeader = request.headers.get('Authorization');
+  const cronSecret = import.meta.env.CRON_SECRET || process.env.CRON_SECRET;
   
-  // Sprawdź autoryzację
-  if (!CRON_SECRET) {
-    return new Response(JSON.stringify({ error: 'CRON_SECRET not configured' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
-  
-  if (secret !== CRON_SECRET) {
+  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' }
@@ -38,105 +19,72 @@ export const GET: APIRoute = async ({ url }) => {
   }
   
   try {
-    // Oblicz datę jutrzejszą (YYYY-MM-DD)
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+    // Znajdź datę za 3 dni
+    const targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() + 3);
+    const targetDateStr = targetDate.toISOString().split('T')[0];
     
-    // Znajdź kursy zaczynające się jutro
-    const coursesTomorrow = await db.select()
+    // Znajdź kursy zaczynające się za 3 dni
+    const upcomingCourses = await db
+      .select()
       .from(courses)
-      .where(
-        and(
-          eq(courses.startDate, tomorrowStr),
-          eq(courses.status, 'open')
-        )
-      );
+      .where(eq(courses.startDate, targetDateStr));
     
-    if (coursesTomorrow.length === 0) {
+    if (upcomingCourses.length === 0) {
       return new Response(JSON.stringify({ 
-        message: 'Brak kursów na jutro',
-        date: tomorrowStr,
-        sent: 0 
+        success: true, 
+        message: 'No courses starting in 3 days',
+        remindersSent: 0 
       }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       });
     }
     
-    const courseIds = coursesTomorrow.map(c => c.id);
+    // Dla każdego kursu znajdź potwierdzone rezerwacje i wyślij przypomnienia
+    const results = [];
     
-    // Znajdź rezerwacje na te kursy (tylko potwierdzone/opłacone, nie anulowane)
-    const reservationsToRemind = await db.select({
-      reservation: reservations,
-      participant: participants,
-      course: courses,
-    })
-      .from(reservations)
-      .leftJoin(participants, eq(reservations.participantId, participants.id))
-      .leftJoin(courses, eq(reservations.courseId, courses.id))
-      .where(
-        and(
-          // Kurs zaczyna się jutro
-          eq(courses.startDate, tomorrowStr),
-          // Status aktywny
-          notInArray(reservations.status, ['cancelled', 'no_show', 'pending'])
-        )
-      );
-    
-    const results: Array<{
-      reservationId: number;
-      participant: string;
-      phone: string;
-      success: boolean;
-      error?: string;
-    }> = [];
-    
-    for (const r of reservationsToRemind) {
-      if (!r.participant?.phone) continue;
+    for (const course of upcomingCourses) {
+      const courseReservations = await db
+        .select({ reservation: reservations, participant: participants })
+        .from(reservations)
+        .leftJoin(participants, eq(reservations.participantId, participants.id))
+        .where(
+          and(
+            eq(reservations.courseId, course.id),
+            eq(reservations.status, 'confirmed')
+          )
+        );
       
-      if (dryRun) {
-        results.push({
-          reservationId: r.reservation.id,
-          participant: `${r.participant.firstName} ${r.participant.lastName}`,
-          phone: r.participant.phone,
-          success: true,
-          error: 'DRY RUN - not sent',
-        });
-        continue;
+      for (const { reservation, participant } of courseReservations) {
+        if (participant?.email) {
+          const emailResult = await sendEmailForEvent('course_reminder', reservation.id);
+          results.push({
+            reservationId: reservation.id,
+            participant: `${participant.firstName} ${participant.lastName}`,
+            email: participant.email,
+            result: emailResult
+          });
+        }
       }
-      
-      const smsResult = await sendSmsForEvent('course_reminder', r.reservation.id);
-      
-      results.push({
-        reservationId: r.reservation.id,
-        participant: `${r.participant.firstName} ${r.participant.lastName}`,
-        phone: r.participant.phone,
-        success: smsResult.success,
-        error: smsResult.error,
-      });
     }
     
-    const successCount = results.filter(r => r.success).length;
-    
-    return new Response(JSON.stringify({
-      message: `Wysłano ${successCount}/${results.length} przypomnień`,
-      date: tomorrowStr,
-      courses: coursesTomorrow.length,
-      sent: successCount,
-      total: results.length,
-      dryRun,
-      details: results,
+    return new Response(JSON.stringify({ 
+      success: true,
+      targetDate: targetDateStr,
+      coursesFound: upcomingCourses.length,
+      remindersSent: results.length,
+      details: results
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
     
   } catch (error) {
-    console.error('Cron error:', error);
+    console.error('Error sending reminders:', error);
     return new Response(JSON.stringify({ 
-      error: 'Błąd wysyłania przypomnień',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

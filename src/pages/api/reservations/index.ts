@@ -4,6 +4,7 @@ import { reservations, participants, courses } from '../../../db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { validateAndNormalizePhone } from '../../../lib/phone';
 import { findOrCreateParticipant } from '../../../lib/participants';
+import { sendEmailForEvent } from '../../../lib/email-service';
 
 // GET /api/reservations - lista rezerwacji z joinami
 export const GET: APIRoute = async ({ url }) => {
@@ -98,7 +99,15 @@ export const POST: APIRoute = async ({ request }) => {
       createdAt: new Date().toISOString(),
     }).returning();
     
-    return new Response(JSON.stringify(result[0]), {
+    // Wyślij emaile (do klienta i admina)
+    let emailResult = null;
+    try {
+      emailResult = await sendEmailForEvent('reservation_submitted', result[0].id);
+    } catch (emailError) {
+      console.error('Email send failed (non-blocking):', emailError);
+    }
+    
+    return new Response(JSON.stringify({ ...result[0], emailResult }), {
       status: 201,
       headers: { 'Content-Type': 'application/json' }
     });

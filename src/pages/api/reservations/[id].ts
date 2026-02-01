@@ -3,6 +3,7 @@ import { db } from '../../../db';
 import { reservations } from '../../../db/schema';
 import { eq } from 'drizzle-orm';
 import { sendSmsForEvent } from '../../../lib/sms';
+import { sendEmailForEvent } from '../../../lib/email-service';
 
 // PUT /api/reservations/:id - aktualizacja rezerwacji (status, płatność)
 export const PUT: APIRoute = async ({ params, request }) => {
@@ -61,17 +62,28 @@ export const PUT: APIRoute = async ({ params, request }) => {
       });
     }
     
-    // Wyślij SMS przy zmianie statusu
+    // Wyślij SMS i email przy zmianie statusu
     let smsResult = null;
+    let emailResult = null;
     if (data.status && data.status !== previousStatus) {
       if (data.status === 'confirmed') {
         smsResult = await sendSmsForEvent('reservation_confirmed', id);
+        try {
+          emailResult = await sendEmailForEvent('reservation_confirmed', id);
+        } catch (e) { console.error('Email error:', e); }
       } else if (data.status === 'paid') {
         smsResult = await sendSmsForEvent('reservation_paid', id);
       }
     }
     
-    return new Response(JSON.stringify({ ...result[0], smsResult }), {
+    // Email przy zmianie statusu płatności na "paid"
+    if (data.paymentStatus === 'paid' && currentReservation?.paymentStatus !== 'paid') {
+      try {
+        emailResult = await sendEmailForEvent('reservation_paid', id);
+      } catch (e) { console.error('Email error:', e); }
+    }
+    
+    return new Response(JSON.stringify({ ...result[0], smsResult, emailResult }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
