@@ -137,8 +137,10 @@ function getSourceLabel(source: string | null) {
         <input 
           type="text" 
           id="participant-search" 
-          placeholder="Szukaj uczestnika (imię, nazwisko, tel)..."
+          placeholder="Szukaj uczestnika..."
           autocomplete="off"
+          inputmode="search"
+          tabindex="0"
           class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
         />
       </div>
@@ -218,6 +220,12 @@ function getSourceLabel(source: string | null) {
     const searchInput = document.getElementById('participant-search');
     const searchResults = document.getElementById('search-results');
     let debounceTimer;
+    
+    // Upewnij się że input nie ma focusa przy ładowaniu (zapobiega klawiaturze na mobile)
+    if (searchInput) {
+      searchInput.blur();
+      document.activeElement?.blur();
+    }
     
     searchInput?.addEventListener('input', (e) => {
       const query = e.target.value.trim();
