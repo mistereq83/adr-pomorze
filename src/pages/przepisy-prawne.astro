@@ -1,0 +1,234 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const penalties = [
+  { 
+    violation: "Brak wyznaczonego Doradcy DGSA", 
+    penalty: "5 000 zł",
+    icon: "🚨"
+  },
+  { 
+    violation: "Brak rocznego sprawozdania (termin: 28 lutego)", 
+    penalty: "5 000 zł",
+    icon: "📋"
+  },
+  { 
+    violation: "Nieprzeszkolenie pracowników przy załadunku/rozładunku", 
+    penalty: "5 000 zł",
+    icon: "👷"
+  },
+  { 
+    violation: "Brak numeru UN na przesyłce", 
+    penalty: "1 000 zł",
+    icon: "🔢"
+  },
+  { 
+    violation: "Brak wymaganej nalepki ostrzegawczej", 
+    penalty: "500 zł",
+    icon: "⚠️"
+  },
+  { 
+    violation: "Brak innego wymaganego oznakowania", 
+    penalty: "500 zł",
+    icon: "🏷️"
+  },
+];
+---
+
+<Layout 
+  title="Przepisy prawne ADR - kary i obowiązki | ADR Pomorze"
+  description="Poznaj obowiązki wynikające z przepisów ADR. Kary do 5000 zł za brak doradcy DGSA. Sprawdź czy Twoja firma musi wyznaczyć doradcę."
+>
+  <!-- Hero -->
+  <section class="bg-gradient-to-br from-[var(--primary)] to-slate-800 text-white py-16 md:py-24">
+    <div class="container-custom px-4 md:px-8">
+      <div class="max-w-3xl">
+        <h1 class="text-3xl md:text-5xl font-black mb-6 leading-tight">
+          Przepisy ADR — co musisz wiedzieć, żeby uniknąć kar
+        </h1>
+        <p class="text-xl text-gray-300 mb-8">
+          Od 2023 roku obowiązek wyznaczenia Doradcy DGSA dotyczy także <strong class="text-white">nadawców</strong> towarów niebezpiecznych. Kary sięgają 5 000 zł.
+        </p>
+        <a href="#sprawdz" class="btn-primary bg-[var(--accent)] hover:bg-orange-600 text-lg px-8 py-4">
+          Sprawdź czy Cię to dotyczy →
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Kogo dotyczą przepisy -->
+  <section class="py-16 bg-white" id="sprawdz">
+    <div class="container-custom px-4 md:px-8">
+      <h2 class="text-2xl md:text-3xl font-bold text-[var(--primary)] mb-8 text-center">
+        Kogo dotyczą przepisy ADR?
+      </h2>
+      
+      <div class="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+        <div class="bg-gray-50 rounded-2xl p-6 border-l-4 border-[var(--accent)]">
+          <div class="text-3xl mb-3">🚛</div>
+          <h3 class="font-bold text-lg mb-2">Przewoźnicy</h3>
+          <p class="text-gray-600">Firmy wykonujące transport drogowy towarów niebezpiecznych</p>
+        </div>
+        
+        <div class="bg-gray-50 rounded-2xl p-6 border-l-4 border-[var(--accent)]">
+          <div class="text-3xl mb-3">📦</div>
+          <h3 class="font-bold text-lg mb-2">Załadunek / Rozładunek</h3>
+          <p class="text-gray-600">Podmioty wykonujące załadunek lub rozładunek towarów niebezpiecznych</p>
+        </div>
+        
+        <div class="bg-gray-50 rounded-2xl p-6 border-l-4 border-[var(--accent)]">
+          <div class="text-3xl mb-3">📤</div>
+          <h3 class="font-bold text-lg mb-2">Nadawcy <span class="text-[var(--accent)] text-sm font-normal">(od 2023!)</span></h3>
+          <p class="text-gray-600">Każde przedsiębiorstwo nadające towary niebezpieczne do transportu</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Obowiązki -->
+  <section class="py-16 bg-gray-50">
+    <div class="container-custom px-4 md:px-8">
+      <h2 class="text-2xl md:text-3xl font-bold text-[var(--primary)] mb-8 text-center">
+        Twoje obowiązki jako przedsiębiorcy
+      </h2>
+      
+      <div class="max-w-3xl mx-auto space-y-6">
+        <div class="bg-white rounded-xl p-6 shadow-sm flex gap-4">
+          <div class="w-12 h-12 bg-[var(--accent)]/10 rounded-lg flex items-center justify-center flex-shrink-0">
+            <span class="text-2xl">👤</span>
+          </div>
+          <div>
+            <h3 class="font-bold text-lg mb-1">Wyznacz Doradcę DGSA</h3>
+            <p class="text-gray-600">Doradca do spraw bezpieczeństwa w transporcie towarów niebezpiecznych — może być zewnętrzny</p>
+          </div>
+        </div>
+        
+        <div class="bg-white rounded-xl p-6 shadow-sm flex gap-4">
+          <div class="w-12 h-12 bg-[var(--accent)]/10 rounded-lg flex items-center justify-center flex-shrink-0">
+            <span class="text-2xl">📊</span>
+          </div>
+          <div>
+            <h3 class="font-bold text-lg mb-1">Złóż roczne sprawozdanie</h3>
+            <p class="text-gray-600">Termin: <strong>do 28 lutego</strong> każdego roku. Sprawozdanie przygotowuje Doradca DGSA i przesyła do ITD.</p>
+          </div>
+        </div>
+        
+        <div class="bg-white rounded-xl p-6 shadow-sm flex gap-4">
+          <div class="w-12 h-12 bg-[var(--accent)]/10 rounded-lg flex items-center justify-center flex-shrink-0">
+            <span class="text-2xl">🎓</span>
+          </div>
+          <div>
+            <h3 class="font-bold text-lg mb-1">Przeszkol pracowników</h3>
+            <p class="text-gray-600">Osoby zatrudnione przy załadunku/rozładunku muszą przejść szkolenie ADR</p>
+          </div>
+        </div>
+        
+        <div class="bg-white rounded-xl p-6 shadow-sm flex gap-4">
+          <div class="w-12 h-12 bg-[var(--accent)]/10 rounded-lg flex items-center justify-center flex-shrink-0">
+            <span class="text-2xl">📁</span>
+          </div>
+          <div>
+            <h3 class="font-bold text-lg mb-1">Archiwizuj dokumenty</h3>
+            <p class="text-gray-600">Sprawozdania roczne przechowuj przez <strong>5 lat</strong></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Kary -->
+  <section class="py-16 bg-white" id="kary">
+    <div class="container-custom px-4 md:px-8">
+      <div class="text-center mb-10">
+        <h2 class="text-2xl md:text-3xl font-bold text-[var(--primary)] mb-3">
+          Kary za naruszenie przepisów ADR
+        </h2>
+        <p class="text-gray-600">ITD może nałożyć karę podczas kontroli drogowej lub w siedzibie firmy</p>
+      </div>
+      
+      <div class="max-w-3xl mx-auto">
+        <div class="bg-red-50 border border-red-200 rounded-2xl overflow-hidden">
+          <div class="bg-red-100 px-6 py-4 border-b border-red-200">
+            <div class="flex items-center gap-2 font-bold text-red-800">
+              <span class="text-xl">⚠️</span>
+              Taryfikator kar ADR
+            </div>
+          </div>
+          
+          <div class="divide-y divide-red-100">
+            {penalties.map((item) => (
+              <div class="px-6 py-4 flex items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                  <span class="text-xl">{item.icon}</span>
+                  <span class="text-gray-800">{item.violation}</span>
+                </div>
+                <span class="font-bold text-red-600 whitespace-nowrap">{item.penalty}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Wyłączenia -->
+  <section class="py-16 bg-gray-50">
+    <div class="container-custom px-4 md:px-8">
+      <div class="max-w-3xl mx-auto">
+        <h2 class="text-2xl md:text-3xl font-bold text-[var(--primary)] mb-6">
+          Kiedy NIE musisz mieć Doradcy?
+        </h2>
+        
+        <div class="bg-green-50 border border-green-200 rounded-2xl p-6">
+          <div class="flex gap-4">
+            <div class="text-3xl">✅</div>
+            <div>
+              <h3 class="font-bold text-lg mb-2 text-green-800">Wyłączenie na podstawie ADR 1.1.3.6</h3>
+              <p class="text-gray-700 mb-4">
+                Nadawca jest wyłączony z obowiązku wyznaczenia doradcy, jeśli nadaje towary niebezpieczne:
+              </p>
+              <ul class="space-y-2 text-gray-700">
+                <li class="flex items-start gap-2">
+                  <span class="text-green-600 mt-1">✓</span>
+                  <span>W <strong>sztukach przesyłki</strong> (nie luzem)</span>
+                </li>
+                <li class="flex items-start gap-2">
+                  <span class="text-green-600 mt-1">✓</span>
+                  <span>W <strong>certyfikowanych opakowaniach</strong> zgodnych z ADR</span>
+                </li>
+                <li class="flex items-start gap-2">
+                  <span class="text-green-600 mt-1">✓</span>
+                  <span>W ilościach nieprzekraczających limitów z tabeli 1.1.3.6</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        
+        <p class="mt-6 text-gray-600 text-center">
+          Nie jesteś pewien czy wyłączenie Cię dotyczy? <a href="#kontakt" class="text-[var(--accent)] font-medium hover:underline">Skontaktuj się z nami</a> — pomożemy to ustalić.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="py-16 bg-[var(--primary)]" id="kontakt">
+    <div class="container-custom px-4 md:px-8 text-center">
+      <h2 class="text-2xl md:text-3xl font-bold text-white mb-4">
+        Potrzebujesz Doradcy DGSA?
+      </h2>
+      <p class="text-gray-300 mb-8 max-w-2xl mx-auto">
+        Oferuję kompleksową obsługę jako zewnętrzny Doradca DGSA — sprawozdania roczne, audyty, szkolenia pracowników. Działam na terenie całego Pomorza.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <a href="tel:+48502611639" class="btn-primary bg-[var(--accent)] hover:bg-orange-600 text-lg px-8 py-4">
+          📞 Zadzwoń: 502 611 639
+        </a>
+        <a href="/doradztwo" class="btn-primary bg-white text-[var(--primary)] hover:bg-gray-100 text-lg px-8 py-4">
+          Zobacz ofertę doradztwa →
+        </a>
+      </div>
+    </div>
+  </section>
+</Layout>
