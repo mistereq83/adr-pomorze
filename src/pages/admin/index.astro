@@ -106,7 +106,7 @@ function getSourceLabel(source: string | null) {
   </div>
   
   <!-- Secondary Stats -->
-  <div class="grid grid-cols-3 gap-3 mb-8">
+  <div class="grid grid-cols-3 gap-3 mb-6">
     <div class="bg-white rounded-xl p-3 shadow-sm text-center">
       <div class="text-xl font-bold text-gray-700">{stats.courses}</div>
       <div class="text-gray-500 text-xs">Wszystkich kursów</div>
@@ -119,6 +119,19 @@ function getSourceLabel(source: string | null) {
       <div class="text-xl font-bold text-gray-700">{stats.participants}</div>
       <div class="text-gray-500 text-xs">Uczestników</div>
     </div>
+  </div>
+  
+  <!-- Quick actions - na górze -->
+  <div class="flex flex-wrap gap-3 mb-8">
+    <a href="/admin/courses/new" class="btn-primary">
+      + Dodaj kurs
+    </a>
+    <a href="/admin/reservations/new" class="btn-primary bg-[var(--success)] hover:bg-emerald-600">
+      + Dodaj rezerwację
+    </a>
+    <a href="/admin/participants" class="btn-secondary">
+      🔍 Szukaj uczestnika
+    </a>
   </div>
   
   <div class="grid lg:grid-cols-2 gap-6">
@@ -185,16 +198,4 @@ function getSourceLabel(source: string | null) {
     </div>
   </div>
   
-  <!-- Quick actions -->
-  <div class="mt-8 flex flex-wrap gap-4">
-    <a href="/admin/courses/new" class="btn-primary">
-      + Dodaj kurs
-    </a>
-    <a href="/admin/reservations/new" class="btn-primary bg-[var(--success)] hover:bg-emerald-600">
-      + Dodaj rezerwację
-    </a>
-    <a href="/admin/participants" class="btn-secondary">
-      Szukaj uczestnika
-    </a>
-  </div>
 </AdminLayout>
