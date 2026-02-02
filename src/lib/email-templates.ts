@@ -235,3 +235,46 @@ export function paymentConfirmed(
     </div>
   `);
 }
+
+// 6. Przypomnienie o uzupełnieniu danych
+export function dataCompletionReminder(
+  participant: ParticipantInfo,
+  course: CourseInfo,
+  completionUrl: string
+): string {
+  return wrapTemplate(`
+    <div class="header" style="background: #f59e0b;">
+      <h1>📝 Uzupełnij swoje dane</h1>
+    </div>
+    <div class="content">
+      <h2>Cześć ${participant.firstName}!</h2>
+      <p>Zapisałeś się na szkolenie ADR i potrzebujemy Twoich pełnych danych osobowych do wystawienia zaświadczenia.</p>
+      
+      <div class="info-box">
+        <h3 style="margin-top: 0;">📋 Twoje szkolenie</h3>
+        <div class="info-row"><span class="info-label">Typ kursu:</span><span class="info-value">${course.type}</span></div>
+        <div class="info-row"><span class="info-label">Termin:</span><span class="info-value">${course.startDate} - ${course.endDate}</span></div>
+      </div>
+      
+      <div class="highlight">
+        <strong>⏳ Link ważny 7 dni</strong><br>
+        Kliknij poniższy przycisk i uzupełnij brakujące dane (PESEL, adres, miejsce urodzenia).
+      </div>
+      
+      <p style="text-align: center; margin: 30px 0;">
+        <a href="${completionUrl}" class="button" style="background: #f59e0b;">
+          Uzupełnij dane →
+        </a>
+      </p>
+      
+      <p style="font-size: 12px; color: #666;">
+        Jeśli przycisk nie działa, skopiuj ten link:<br>
+        <a href="${completionUrl}" style="word-break: break-all;">${completionUrl}</a>
+      </p>
+    </div>
+    <div class="footer">
+      <p>ADR Pomorze - Szkolenia ADR</p>
+      <p>Telefon: 502 611 639</p>
+    </div>
+  `);
+}

@@ -1,9 +1,11 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../../db';
-import { reservations, participants, completionTokens } from '../../../../db/schema';
+import { reservations, participants, completionTokens, courses } from '../../../../db/schema';
 import { eq } from 'drizzle-orm';
 import { randomBytes } from 'crypto';
 import { sendSms } from '../../../../lib/sms';
+import { sendEmail } from '../../../../lib/mailer';
+import { dataCompletionReminder } from '../../../../lib/email-templates';
 
 const PUBLIC_URL = process.env.PUBLIC_URL || 'https://adr.apps.ekolan.pl';
 
@@ -19,14 +21,16 @@ export const POST: APIRoute = async ({ params, request }) => {
     const body = await request.json().catch(() => ({}));
     const sendVia = body.sendVia || 'sms'; // 'sms', 'email', 'both'
     
-    // Pobierz rezerwację z uczestnikiem
+    // Pobierz rezerwację z uczestnikiem i kursem
     const result = await db
       .select({
         reservation: reservations,
         participant: participants,
+        course: courses,
       })
       .from(reservations)
       .leftJoin(participants, eq(reservations.participantId, participants.id))
+      .leftJoin(courses, eq(reservations.courseId, courses.id))
       .where(eq(reservations.id, reservationId))
       .limit(1);
     
@@ -37,7 +41,7 @@ export const POST: APIRoute = async ({ params, request }) => {
       });
     }
     
-    const { reservation, participant } = result[0];
+    const { reservation, participant, course } = result[0];
     
     // Oznacz stare tokeny jako wygasłe
     await db.update(completionTokens)
@@ -65,7 +69,7 @@ export const POST: APIRoute = async ({ params, request }) => {
     
     const completionUrl = `${PUBLIC_URL}/uzupelnij-dane/${token}`;
     
-    // Wyślij SMS
+    // Wyślij SMS i/lub Email
     let smsSent = false;
     let emailSent = false;
     
@@ -75,8 +79,44 @@ export const POST: APIRoute = async ({ params, request }) => {
       smsSent = smsResult.success;
     }
     
-    // TODO: Wysyłka email (gdy będzie zintegrowany)
-    // if ((sendVia === 'email' || sendVia === 'both') && participant.email) { ... }
+    // Wysyłka email
+    if ((sendVia === 'email' || sendVia === 'both') && participant.email && participant.email.includes('@')) {
+      try {
+        // Mapuj typ kursu
+        const courseTypes: Record<string, string> = {
+          'podstawowy': 'Kurs podstawowy ADR',
+          'cysterny': 'Kurs specjalistyczny - Cysterny',
+          'klasa1': 'Kurs specjalistyczny - Klasa 1',
+          'klasa7': 'Kurs specjalistyczny - Klasa 7',
+          'odnowienie': 'Szkolenie odnowieniowe ADR',
+        };
+        
+        const formatDate = (d: string | null) => d ? new Date(d).toLocaleDateString('pl-PL') : '---';
+        
+        const emailHtml = dataCompletionReminder(
+          {
+            firstName: participant.firstName,
+            lastName: participant.lastName,
+            phone: participant.phone,
+            email: participant.email,
+          },
+          {
+            type: courseTypes[course?.courseType || ''] || course?.courseType || 'Szkolenie ADR',
+            startDate: formatDate(course?.startDate || null),
+            endDate: formatDate(course?.endDate || null),
+          },
+          completionUrl
+        );
+        
+        emailSent = await sendEmail({
+          to: participant.email,
+          subject: '📝 Uzupełnij dane do szkolenia ADR',
+          html: emailHtml,
+        });
+      } catch (e) {
+        console.error('Error sending completion email:', e);
+      }
+    }
     
     return new Response(JSON.stringify({
       success: true,

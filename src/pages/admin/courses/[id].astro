@@ -445,16 +445,16 @@ function maskPhone(phone: string | null) {
       
       <div class="space-y-2 mb-4">
         <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent)]/5">
-          <input type="radio" name="sendVia" value="sms" checked class="text-[var(--accent)]" />
-          <span>📱 SMS</span>
+          <input type="radio" name="sendVia" value="both" checked class="text-[var(--accent)]" />
+          <span>📱📧 SMS + Email</span>
+        </label>
+        <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent)]/5">
+          <input type="radio" name="sendVia" value="sms" class="text-[var(--accent)]" />
+          <span>📱 Tylko SMS</span>
         </label>
         <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent)]/5">
           <input type="radio" name="sendVia" value="email" class="text-[var(--accent)]" />
-          <span>📧 Email</span>
-        </label>
-        <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent)]/5">
-          <input type="radio" name="sendVia" value="both" class="text-[var(--accent)]" />
-          <span>📱📧 Oba</span>
+          <span>📧 Tylko Email</span>
         </label>
       </div>
       
@@ -538,10 +538,10 @@ function maskPhone(phone: string | null) {
           const res = await fetch(`/api/reservations/${id}/send-completion-link`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sendVia: 'sms' })
+            body: JSON.stringify({ sendVia: 'both' })
           });
           const data = await res.json();
-          if (data.success && data.sent.sms) sent++;
+          if (data.success && (data.sent.sms || data.sent.email)) sent++;
           else errors++;
         } catch {
           errors++;

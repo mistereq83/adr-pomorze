@@ -81,12 +81,12 @@ if (Astro.request.method === 'POST') {
       if (newStatus === 'confirmed' && oldStatus !== 'confirmed') {
         smsResult = await sendSmsForEvent('reservation_confirmed', parseInt(id));
         
-        // Automatycznie wyślij link do uzupełnienia danych
+        // Automatycznie wyślij link do uzupełnienia danych (SMS + email)
         try {
           const response = await fetch(`${Astro.url.origin}/api/reservations/${id}/send-completion-link`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sendVia: 'sms' })
+            body: JSON.stringify({ sendVia: 'both' })
           });
           linkResult = await response.json();
         } catch (e) {
@@ -397,13 +397,16 @@ const statusColors: Record<string, string> = {
           const response = await fetch(`/api/reservations/${reservationId}/send-completion-link`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sendVia: 'sms' })
+            body: JSON.stringify({ sendVia: 'both' })
           });
           
           const result = await response.json();
           
           if (response.ok) {
-            alert('Link wysłany SMS-em!');
+            const methods = [];
+            if (result.sent?.sms) methods.push('SMS');
+            if (result.sent?.email) methods.push('email');
+            alert(`Link wysłany: ${methods.join(' + ') || 'brak kanału'}`);
             window.location.reload();
           } else {
             alert('Błąd: ' + (result.error || 'Nieznany błąd'));
