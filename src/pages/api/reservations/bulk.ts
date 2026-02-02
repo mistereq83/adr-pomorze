@@ -45,7 +45,7 @@ export const POST: APIRoute = async ({ request }) => {
     const createdReservations = [];
     
     for (const course of data.courses) {
-      const courseDetails = `${course.type} (${course.date})${course.note ? ` - ${course.note}` : ''} - ${course.price} zł`;
+      const courseDetails = `${course.type} (${course.date})${course.note ? ` - ${course.note}` : ''}`;
       
       const reservation = await db.insert(reservations).values({
         courseId: parseInt(course.id) || null,

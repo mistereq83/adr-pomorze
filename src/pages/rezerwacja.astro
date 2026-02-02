@@ -129,8 +129,7 @@ function getCourseTypeLabel(type: string) {
                 <option value="">-- Wybierz termin --</option>
                 {openCourses.map(c => (
                   <option value={c.id}>
-                    {c.startDate} - {c.endDate} | {getCourseTypeLabel(c.courseType || '')} | {c.location}
-                    {c.price && ` | ${c.price} zł`}
+                    {c.startDate} - {c.endDate} | {getCourseTypeLabel(c.courseType || '')}
                   </option>
                 ))}
               </select>

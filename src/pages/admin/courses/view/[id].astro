@@ -142,15 +142,7 @@ const paymentLabels: Record<string, { label: string; class: string }> = {
       </div>
 
       <!-- Szczegóły -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
-        <div>
-          <span class="text-sm text-gray-500 block">📍 Lokalizacja</span>
-          <span class="font-medium">{course.location || 'Gdańsk'}</span>
-        </div>
-        <div>
-          <span class="text-sm text-gray-500 block">💰 Cena</span>
-          <span class="font-bold text-lg">{course.price ? `${course.price} zł` : '-'}</span>
-        </div>
+      <div class="grid grid-cols-2 gap-4 pt-4 border-t">
         <div>
           <span class="text-sm text-gray-500 block">👥 Zapisanych</span>
           <span class={`font-bold text-lg ${totalParticipants >= (course.maxParticipants || 15) ? 'text-red-600' : ''}`}>

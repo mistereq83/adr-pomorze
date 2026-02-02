@@ -121,8 +121,6 @@ export async function sendSmsForEvent(
     kurs: course?.courseType || '',
     data: course?.startDate ? new Date(course.startDate).toLocaleDateString('pl-PL') : '',
     data_koniec: course?.endDate ? new Date(course.endDate).toLocaleDateString('pl-PL') : '',
-    lokalizacja: course?.location || '',
-    cena: course?.price?.toString() || '',
   };
 
   // Parsuj szablon
@@ -196,7 +194,6 @@ export async function sendAdminNotificationSms(reservationId: number): Promise<S
     email: participant.email || '',
     kurs: course?.courseType || '',
     data: course?.startDate ? new Date(course.startDate).toLocaleDateString('pl-PL') : '',
-    lokalizacja: course?.location || '',
   };
 
   const message = parseTemplate(template.template, variables);
@@ -240,7 +237,7 @@ export async function initDefaultTemplates() {
     {
       event: 'course_reminder',
       name: 'Przypomnienie o kursie',
-      template: '{{imie}}, przypominamy: kurs ADR zaczyna się {{data}} o 8:00 w {{lokalizacja}}. ADR Pomorze',
+      template: '{{imie}}, przypominamy: kurs ADR zaczyna się {{data}} o 8:00. ADR Pomorze',
     },
     {
       event: 'admin_new_reservation',

@@ -91,11 +91,9 @@ function formatDateRange(start: string, end: string) {
             </div>
             
             <div class="flex items-center justify-between text-sm mb-3">
-              <span class="text-gray-500">📍 {course.location}</span>
               <span class={isFull ? 'text-red-600 font-bold' : 'text-gray-600'}>
                 👥 {course.reservationCount} / {course.maxParticipants}
               </span>
-              {course.price && <span class="font-bold text-[var(--accent)]">{course.price} zł</span>}
             </div>
             
             <div class="flex gap-2 pt-3 border-t" onclick="event.stopPropagation()">
@@ -125,8 +123,6 @@ function formatDateRange(start: string, end: string) {
         <tr>
           <th class="text-left p-4 font-medium text-gray-700">Data</th>
           <th class="text-left p-4 font-medium text-gray-700">Typ kursu</th>
-          <th class="text-left p-4 font-medium text-gray-700">Miejsce</th>
-          <th class="text-left p-4 font-medium text-gray-700">Cena</th>
           <th class="text-left p-4 font-medium text-gray-700">Zapisanych</th>
           <th class="text-left p-4 font-medium text-gray-700">Status</th>
           <th class="text-left p-4 font-medium text-gray-700">Akcje</th>
@@ -157,8 +153,6 @@ function formatDateRange(start: string, end: string) {
                     {typeStyle.emoji} {typeStyle.label}
                   </span>
                 </td>
-                <td class="p-4 text-gray-600">{course.location}</td>
-                <td class="p-4 font-bold">{course.price ? `${course.price} zł` : '-'}</td>
                 <td class="p-4">
                   <span class={course.reservationCount >= (course.maxParticipants || 15) ? 'text-red-600 font-bold' : ''}>
                     {course.reservationCount} / {course.maxParticipants}

@@ -37,8 +37,6 @@ interface CourseInfo {
   type: string;
   startDate: string;
   endDate: string;
-  location: string;
-  price?: number;
 }
 
 interface ParticipantInfo {
@@ -74,8 +72,6 @@ export function reservationSubmitted(
         <h3 style="margin-top: 0;">📋 Szczegóły szkolenia</h3>
         <div class="info-row"><span class="info-label">Typ kursu:</span><span class="info-value">${course.type}</span></div>
         <div class="info-row"><span class="info-label">Termin:</span><span class="info-value">${course.startDate} - ${course.endDate}</span></div>
-        <div class="info-row"><span class="info-label">Miejsce:</span><span class="info-value">${course.location}</span></div>
-        ${course.price ? `<div class="info-row"><span class="info-label">Cena:</span><span class="info-value">${course.price} zł</span></div>` : ''}
       </div>
       
       <div class="highlight">
@@ -113,7 +109,6 @@ export function reservationConfirmed(
         <h3 style="margin-top: 0;">📋 Szczegóły szkolenia</h3>
         <div class="info-row"><span class="info-label">Typ kursu:</span><span class="info-value">${course.type}</span></div>
         <div class="info-row"><span class="info-label">Termin:</span><span class="info-value">${course.startDate} - ${course.endDate}</span></div>
-        <div class="info-row"><span class="info-label">Miejsce:</span><span class="info-value">${course.location}</span></div>
         <div class="info-row"><span class="info-label">Nr rezerwacji:</span><span class="info-value">#${reservation.id}</span></div>
       </div>
       
@@ -151,7 +146,6 @@ export function courseReminder(
         <h3 style="margin-top: 0;">📋 Szczegóły</h3>
         <div class="info-row"><span class="info-label">Typ kursu:</span><span class="info-value">${course.type}</span></div>
         <div class="info-row"><span class="info-label">Data rozpoczęcia:</span><span class="info-value"><strong>${course.startDate}</strong></span></div>
-        <div class="info-row"><span class="info-label">Miejsce:</span><span class="info-value">${course.location}</span></div>
       </div>
       
       <div class="highlight">

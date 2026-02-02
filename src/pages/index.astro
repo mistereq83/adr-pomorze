@@ -107,7 +107,6 @@ const courses = dbCourses.map(course => {
     note: getCourseNote(course.courseType, course.startDate),
     spots: Math.max(0, availableSpots),
     availability,
-    price: course.price || 0,
     days: getDurationDays(course.startDate, course.endDate),
   };
 });
@@ -115,7 +114,7 @@ const courses = dbCourses.map(course => {
 const nextCourses = courses.slice(0, 3);
 ---
 
-<Layout title="ADR Pomorze | Szkolenia ADR i Doradztwo DGSA - Gdańsk, Gdynia, Sopot">
+<Layout title="ADR Pomorze | Szkolenia ADR i Doradztwo DGSA">
   
   <!-- Hero Section - Mobile First -->
   <section class="relative min-h-[60vh] md:min-h-[80vh] flex items-center overflow-hidden">
@@ -245,7 +244,6 @@ const nextCourses = courses.slice(0, 3);
             data-id={course.id}
             data-date={course.date}
             data-type={course.type}
-            data-price={course.price}
             data-note={course.note}
             data-spots={course.spots}
           >
@@ -269,13 +267,10 @@ const nextCourses = courses.slice(0, 3);
             {/* Separator */}
             <div class="border-t border-gray-100 my-2 md:my-3"></div>
             
-            {/* Price + Availability + Button */}
+            {/* Availability + Button */}
             <div class="flex items-center justify-between">
-              <div>
-                <div class="text-sm md:text-lg font-bold text-[var(--primary)]">{course.price} zł</div>
-                <div class={`text-[10px] md:text-xs font-medium ${course.availability.color}`}>
-                  {course.spots > 0 ? (course.spots <= 5 ? '🟡' : '🟢') : '🔴'} {course.availability.label}
-                </div>
+              <div class={`text-[10px] md:text-xs font-medium ${course.availability.color}`}>
+                {course.spots > 0 ? (course.spots <= 5 ? '🟡' : '🟢') : '🔴'} {course.availability.label}
               </div>
               {course.spots > 0 ? (
                 <button 
@@ -353,7 +348,7 @@ const nextCourses = courses.slice(0, 3);
       </div>
       
       <p class="text-gray-400 text-sm">
-        📍 Gdańsk, Gdynia, Sopot i całe Pomorze
+        📍 Całe Pomorze
       </p>
     </div>
   </section>
@@ -366,8 +361,6 @@ const nextCourses = courses.slice(0, 3);
           <div class="flex items-center gap-2 mb-1">
             <span class="text-lg">🛒</span>
             <span class="font-bold text-[var(--primary)]" id="cart-count">0 szkoleń</span>
-            <span class="text-gray-400">•</span>
-            <span class="font-bold text-[var(--accent)]" id="cart-total">0 zł</span>
           </div>
           <div class="text-xs text-gray-500 truncate" id="cart-summary">Wybierz szkolenia powyżej</div>
         </div>
@@ -402,10 +395,6 @@ const nextCourses = courses.slice(0, 3);
           <div class="mb-4">
             <div id="modal-courses" class="space-y-1.5 text-sm">
               <!-- Filled by JS -->
-            </div>
-            <div class="border-t mt-2 pt-2 flex justify-between font-bold text-sm">
-              <span>Razem:</span>
-              <span id="modal-total" class="text-[var(--accent)]">0 zł</span>
             </div>
           </div>
           
@@ -578,7 +567,6 @@ const nextCourses = courses.slice(0, 3);
   
   const cartBar = document.getElementById('cart-bar');
   const cartCount = document.getElementById('cart-count');
-  const cartTotal = document.getElementById('cart-total');
   const cartSummary = document.getElementById('cart-summary');
   const cartSpacer = document.getElementById('cart-spacer');
   const cartSubmitBtn = document.getElementById('cart-submit-btn');
@@ -586,7 +574,6 @@ const nextCourses = courses.slice(0, 3);
   const modal = document.getElementById('registration-modal');
   const modalClose = document.getElementById('modal-close');
   const modalCourses = document.getElementById('modal-courses');
-  const modalTotal = document.getElementById('modal-total');
   const form = document.getElementById('registration-form');
   
   const successModal = document.getElementById('success-modal');
@@ -627,7 +614,6 @@ const nextCourses = courses.slice(0, 3);
           id,
           date: card.dataset.date,
           type: card.dataset.type,
-          price: parseInt(card.dataset.price),
           note: card.dataset.note
         });
         card.classList.add('selected');
@@ -642,11 +628,9 @@ const nextCourses = courses.slice(0, 3);
   
   function updateCartUI() {
     const count = cart.size;
-    const total = Array.from(cart.values()).reduce((sum, c) => sum + c.price, 0);
     const items = Array.from(cart.values());
     
     cartCount.textContent = `${count} ${count === 1 ? 'szkolenie' : count < 5 ? 'szkolenia' : 'szkoleń'}`;
-    cartTotal.textContent = `${total} zł`;
     
     if (items.length > 0) {
       const names = items.map(c => `${c.type} (${c.date})`).join(', ');
@@ -676,20 +660,14 @@ const nextCourses = courses.slice(0, 3);
     
     // Populate modal with selected courses
     const items = Array.from(cart.values());
-    const total = items.reduce((sum, c) => sum + c.price, 0);
     
     modalCourses.innerHTML = items.map(c => `
-      <div class="flex justify-between items-center bg-gray-50 rounded-md px-3 py-2">
-        <div>
-          <span class="font-medium">${c.type}</span>
-          <span class="text-gray-400 mx-1">•</span>
-          <span class="text-gray-500">${c.date}</span>
-        </div>
-        <div class="font-bold">${c.price} zł</div>
+      <div class="flex items-center bg-gray-50 rounded-md px-3 py-2">
+        <span class="font-medium">${c.type}</span>
+        <span class="text-gray-400 mx-1">•</span>
+        <span class="text-gray-500">${c.date}</span>
       </div>
     `).join('');
-    
-    modalTotal.textContent = `${total} zł`;
     
     modal.classList.remove('hidden');
     document.body.style.overflow = 'hidden';

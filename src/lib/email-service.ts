@@ -98,8 +98,6 @@ export async function sendEmailForEvent(
       type: getCourseTypeName(course.courseType),
       startDate: formatDate(course.startDate),
       endDate: formatDate(course.endDate),
-      location: course.location || 'Gdańsk',
-      price: course.price ? Number(course.price) : undefined,
     };
     
     const reservationInfo = {

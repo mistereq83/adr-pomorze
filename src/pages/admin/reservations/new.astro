@@ -119,7 +119,7 @@ function formatDateShort(dateStr: string) {
               {formatDateShort(preselectedCourse.startDate)} - {formatDateShort(preselectedCourse.endDate)}
               <span class="ml-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded">{getCourseTypeLabel(preselectedCourse.courseType)}</span>
             </div>
-            <div class="text-sm text-green-600">{preselectedCourse.location} • {preselectedCourse.price} zł</div>
+            <div class="text-sm text-green-600">{preselectedCourse.maxParticipants} miejsc</div>
             <input type="hidden" name="courseId" value={preselectedCourse.id} />
           </div>
         ) : (
@@ -142,7 +142,7 @@ function formatDateShort(dateStr: string) {
                       {formatDateShort(c.startDate)} - {formatDateShort(c.endDate)}
                     <span class="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded">{getCourseTypeLabel(c.courseType)}</span>
                   </div>
-                  <div class="text-sm text-gray-500">{c.location} • {c.price} zł</div>
+                  <div class="text-sm text-gray-500">{c.maxParticipants} miejsc</div>
                 </div>
               </label>
             ))
